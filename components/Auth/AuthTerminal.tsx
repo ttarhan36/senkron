@@ -28,61 +28,10 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
   const [usernameInput, setUsernameInput] = useState('');
   const [userPasswordInput, setUserPasswordInput] = useState('');
 
-  // MASTER bypass - Okul Seçim
-  const [masterSchoolList, setMasterSchoolList] = useState<{ id: string, name: string }[]>([]);
-  const [showSchoolPicker, setShowSchoolPicker] = useState(false);
-
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    const input = email.trim().toUpperCase();
-
-    // MASTER BYPASS - Okul seçimi gerektirir (GÜVENLİK AYARI: ARTIK ŞİFRE ZORUNLU)
-    if (input === 'MASTER' || input === '999') {
-      // Güvenlik Kontrolü: Master Key
-      if (password !== 'skn.master.2024') {
-        setError("MASTER GİRİŞİ YETKİSİZ! (GÜVENLİK ANAHTARI HATALI)");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data: schoolsList, error: schoolsErr } = await supabase.from('schools').select('id, name');
-        if (schoolsErr) throw schoolsErr;
-
-        if (!schoolsList || schoolsList.length === 0) {
-          // Hiç okul yoksa varsayılan oluştur
-          onAuthSuccess({
-            role: UserRole.ADMIN,
-            id: 'MASTER-ID',
-            name: 'MASTER_ADMİN',
-            schoolId: 'MASTER_SCHOOL_001',
-            email: 'master@senkron.ai'
-          });
-          triggerSuccess("TEST_DNA_AKTİF");
-        } else if (schoolsList.length === 1) {
-          // Tek okul varsa direkt gir
-          onAuthSuccess({
-            role: UserRole.ADMIN,
-            id: 'MASTER-ID',
-            name: `MASTER (${schoolsList[0].name})`,
-            schoolId: schoolsList[0].id,
-            email: 'master@senkron.ai'
-          });
-          triggerSuccess(`${schoolsList[0].name} SEÇİLDİ`);
-        } else {
-          // Birden fazla okul varsa, seçim listesini göster
-          setMasterSchoolList(schoolsList);
-          setShowSchoolPicker(true);
-        }
-      } catch (err: any) {
-        setError("OKUL LİSTESİ ALINAMADI");
-      }
-      setLoading(false);
-      return;
-    }
 
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -418,53 +367,6 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
         </div>
       </div>
 
-      {/* MASTER OKUL SEÇİM MODALI */}
-      {showSchoolPicker && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
-          <div className="bg-[#0d141b] border-2 border-[#fbbf24] p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 rounded-sm">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-[14px] font-black text-white uppercase tracking-widest">OKUL SEÇİMİ</h3>
-                <span className="text-[8px] font-black text-[#fbbf24] uppercase tracking-[0.4em] mt-2 block">MASTER MOD - HEDEF OKUL SEÇİNİZ</span>
-              </div>
-              <button onClick={() => setShowSchoolPicker(false)} className="w-10 h-10 border border-white/10 text-white/40 hover:text-white transition-all"><i className="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
-              {masterSchoolList.map(school => (
-                <button
-                  key={school.id}
-                  onClick={() => {
-                    onAuthSuccess({
-                      role: UserRole.ADMIN,
-                      id: 'MASTER-ID',
-                      name: `MASTER (${school.name})`,
-                      schoolId: school.id,
-                      email: 'master@senkron.ai'
-                    });
-                    setShowSchoolPicker(false);
-                    triggerSuccess(`${school.name} SEÇİLDİ`);
-                  }}
-                  className="w-full p-4 bg-[#1e293b] border border-white/10 text-left hover:border-[#fbbf24] hover:bg-[#fbbf24]/10 transition-all group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[13px] font-black text-white uppercase block">{school.name}</span>
-                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1 block">{school.id}</span>
-                    </div>
-                    <i className="fa-solid fa-chevron-right text-slate-600 group-hover:text-[#fbbf24] transition-all"></i>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/20">
-              <p className="text-[8px] font-black text-red-400 uppercase text-center tracking-widest">
-                <i className="fa-solid fa-triangle-exclamation mr-2"></i>
-                DİKKAT: SEÇTİĞİNİZ OKULA AİT VERİLER YÜKLENECEKTİR
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
