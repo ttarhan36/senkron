@@ -39,8 +39,15 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
 
     const input = email.trim().toUpperCase();
 
-    // MASTER BYPASS - Okul seçimi gerektirir
+    // MASTER BYPASS - Okul seçimi gerektirir (GÜVENLİK AYARI: ARTIK ŞİFRE ZORUNLU)
     if (input === 'MASTER' || input === '999') {
+      // Güvenlik Kontrolü: Master Key
+      if (password !== 'skn.master.2024') {
+        setError("MASTER GİRİŞİ YETKİSİZ! (GÜVENLİK ANAHTARI HATALI)");
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data: schoolsList, error: schoolsErr } = await supabase.from('schools').select('id, name');
         if (schoolsErr) throw schoolsErr;
