@@ -67,19 +67,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, userRo
         <LogoSVG className="w-full h-full text-[#3b82f6] drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
       </div>
 
-      <div className="flex-1 space-y-2 w-full overflow-y-auto no-scrollbar">
+      <div className="flex-1 space-y-1 w-full overflow-y-auto no-scrollbar">
         {menuItems.map((item) => (
           <button
             key={item.id}
             onClick={() => setActiveModule(item.id as ModuleType)}
             title={item.label}
-            className={`w-full flex items-center justify-center py-3 transition-all duration-200 group relative ${
+            className={`w-full h-8 flex items-center justify-center transition-all duration-200 group relative ${
               activeModule === item.id 
                 ? 'bg-[#141d26] border-l-4 border-[#3b82f6] text-[#3b82f6]' 
                 : 'text-[#909aa3]/50 hover:text-[#e4e4e7] hover:bg-[#141d26]/40 border-l-4 border-transparent'
             }`}
           >
-            <i className={`fa-solid ${item.icon} text-[16px] group-hover:scale-125 transition-transform`}></i>
+            <i className={`fa-solid ${item.icon} text-[14px] group-hover:scale-110 transition-transform`}></i>
           </button>
         ))}
       </div>
