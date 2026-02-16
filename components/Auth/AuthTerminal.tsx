@@ -28,10 +28,33 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
   const [usernameInput, setUsernameInput] = useState('');
   const [userPasswordInput, setUserPasswordInput] = useState('');
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          redirectTo: window.location.origin
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message.toUpperCase());
+      setLoading(false);
+    }
+  };
+
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const input = email.trim().toUpperCase();
 
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
@@ -278,6 +301,18 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
                 </div>
                 {error && <div className="p-3 bg-red-900/20 border border-red-500/20 text-red-500 text-[9px] font-black uppercase text-center">{error}</div>}
                 <button disabled={loading} className="w-full h-14 bg-[#3b82f6] text-white font-black text-[11px] uppercase tracking-[0.3em] hover:brightness-110 shadow-xl transition-all">{loading ? 'DOĞRULANIYOR...' : 'YÖNETİM_PANELİNE_GİR'}</button>
+
+                <div className="relative flex items-center gap-2 py-2">
+                  <div className="h-[1px] bg-[#354a5f] flex-1"></div>
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">VEYA</span>
+                  <div className="h-[1px] bg-[#354a5f] flex-1"></div>
+                </div>
+
+                <button type="button" onClick={handleGoogleLogin} disabled={loading} className="w-full h-14 bg-white text-black font-black text-[11px] uppercase tracking-[0.3em] hover:bg-slate-200 shadow-xl transition-all flex items-center justify-center gap-3">
+                  <i className="fa-brands fa-google text-lg"></i>
+                  <span>GOOGLE İLE GİRİŞ</span>
+                </button>
+
                 <div className="text-center pt-2"><button type="button" onClick={() => setMode('REGISTER')} className="text-[8px] font-black text-slate-500 hover:text-white uppercase tracking-widest">YENİ OKUL KAYDI OLUŞTUR</button></div>
               </form>
             ) : mode === 'REGISTER' ? (

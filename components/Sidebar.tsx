@@ -81,11 +81,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, userRo
             key={item.id}
             onClick={() => setActiveModule(item.id as ModuleType)}
             className={`w-full flex items-center justify-center md:justify-start gap-4 px-2.5 md:px-4 py-5.5 md:py-3 transition-all duration-200 group relative ${activeModule === item.id
-                ? 'bg-[#141d26] border-l-4 border-[#3b82f6] text-[#3b82f6]'
-                : 'text-[#909aa3]/50 hover:text-[#e4e4e7] hover:bg-[#141d26]/40 border-l-4 border-transparent'
+              ? 'bg-[#141d26] border-l-4 border-[#3b82f6] text-[#3b82f6]'
+              : 'text-[#909aa3]/50 hover:text-[#e4e4e7] hover:bg-[#141d26]/40 border-l-4 border-transparent'
               }`}
           >
-            <i className={`fa-solid ${item.icon} w-5 text-center text-[16px] md:text-[12px] group-hover:scale-125 md:group-hover:scale-110 transition-transform`}></i>
+            <i className={`fa-solid ${item.icon} fa-fw text-[16px] md:text-[12px] group-hover:scale-125 md:group-hover:scale-110 transition-transform`}></i>
             <span className="hidden md:block font-black text-[8px] uppercase tracking-widest">{item.label}</span>
           </button>
         ))}

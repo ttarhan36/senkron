@@ -24,6 +24,88 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, authSession) => {
+      // SIGNED_IN: Normal giriş
+      // INITIAL_SESSION: Sayfa yenilendiğinde mevcut oturum
+      // TOKEN_REFRESHED: Token yenilendiğinde
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && authSession?.user && !session) {
+        // OAuth veya Magic Link ile giriş yapıldığında burası tetiklenir
+        const user = authSession.user;
+        let userRole = UserRole.ADMIN;
+        let schoolId = '';
+        let fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'KULLANICI';
+
+        try {
+          // 1. Profil tablosunu kontrol et
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (profile) {
+            userRole = (profile.role as UserRole) || UserRole.ADMIN;
+            schoolId = profile.school_id;
+            fullName = profile.full_name;
+          }
+          // 2. Metadata'da var mı?
+          else if (user.user_metadata?.school_id) {
+            schoolId = user.user_metadata.school_id;
+            userRole = (user.user_metadata.role as UserRole) || UserRole.ADMIN;
+          }
+          // 3. HİÇBİR KAYIT YOKSA -> OTOMATİK ADMİN KAYDI YAP (Google ile ilk giriş)
+          else {
+            console.log("Yeni Google kullanıcısı tespit edildi, otomatik okul kaydı oluşturuluyor...");
+            schoolId = `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
+            const newSchoolName = (fullName + " OKULU").toUpperCase();
+
+            // Paralel kayıt oluşturma (Hata yönetimi için sırayla da yapılabilir ama hız için Promise.all)
+            await Promise.all([
+              supabase.from('schools').insert({ id: schoolId, name: newSchoolName }),
+              supabase.from('school_config').insert({ school_id: schoolId, config_json: DEFAULT_DNA }),
+              supabase.from('user_profiles').insert({
+                user_id: user.id,
+                school_id: schoolId,
+                full_name: fullName.toUpperCase(),
+                role: UserRole.ADMIN
+              })
+            ]);
+
+            // Kullanıcı metadatasını güncelle ki sonraki girişlerde db araması gerekmesin
+            await supabase.auth.updateUser({
+              data: { school_id: schoolId, role: UserRole.ADMIN, full_name: fullName.toUpperCase() }
+            });
+          }
+
+          if (schoolId) {
+            const newSession: UserSession = {
+              role: userRole,
+              id: user.id,
+              name: fullName.toUpperCase(),
+              schoolId: schoolId,
+              email: user.email
+            };
+            setSession(newSession);
+            localStorage.setItem('senkron_session', JSON.stringify(newSession));
+          }
+        } catch (err) {
+          console.error("Google Login Auto-Register Error:", err);
+          // Hata durumunda kullanıcıyı logout yapabiliriz veya notification gösterebiliriz
+        }
+      } else if (event === 'SIGNED_OUT') {
+
+        setSession(null);
+        localStorage.removeItem('senkron_session');
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [session]);
+
+
   const [activeModule, setActiveModule] = useState<ModuleType>(
     session?.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW :
       session?.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW :
@@ -470,6 +552,103 @@ const App: React.FC = () => {
     }
   };
 
+  const handleRestoreDNA = async (payload: any) => {
+    if (!session) return;
+    setIsSyncing(true);
+    try {
+      const sid = session.schoolId;
+      // 1. Önce eski tüm verileri sil
+      await Promise.all([
+        supabase.from('schedule').delete().eq('school_id', sid),
+        supabase.from('announcements').delete().eq('school_id', sid),
+        supabase.from('students').delete().eq('school_id', sid),
+      ]);
+      await Promise.all([
+        supabase.from('classes').delete().eq('school_id', sid),
+        supabase.from('teachers').delete().eq('school_id', sid),
+        supabase.from('lessons').delete().eq('school_id', sid),
+        supabase.from('courses').delete().eq('school_id', sid),
+      ]);
+
+      // 2. Yedek verileri state'e yükle
+      const restoredTeachers = payload.teachers || [];
+      const restoredClasses = payload.classes || [];
+      const restoredLessons = payload.lessons || [];
+      const restoredCourses = payload.courses || [];
+      const restoredAnnouncements = payload.announcements || [];
+      const restoredSchedule = payload.schedule || [];
+      const restoredConfig = payload.config || DEFAULT_DNA;
+
+      setTeachers(restoredTeachers);
+      setClasses(restoredClasses);
+      setLessons(restoredLessons);
+      setCourses(restoredCourses);
+      setAnnouncements(restoredAnnouncements);
+      setFinalSchedule(restoredSchedule);
+      setSchoolConfig(restoredConfig);
+
+      // 3. Yeni verileri veritabanına yaz
+      // Config
+      await supabase.from('school_config').upsert({ school_id: sid, config_json: restoredConfig });
+
+      // Teachers
+      if (restoredTeachers.length > 0) {
+        await saveToSupabase('teachers', restoredTeachers);
+      }
+
+      // Lessons
+      if (restoredLessons.length > 0) {
+        await saveToSupabase('lessons', restoredLessons);
+      }
+
+      // Classes (öğrenciler hariç)
+      if (restoredClasses.length > 0) {
+        await saveToSupabase('classes', restoredClasses.map(({ students, ...c }: any) => ({
+          ...c,
+          lessonLogs: c.lessonLogs || []
+        })));
+
+        // Students
+        const allStudents = restoredClasses.flatMap((cls: any) =>
+          (cls.students || []).map((s: any) => ({
+            ...s,
+            class_id: cls.id,
+            school_id: sid,
+            name: (s.name || s.full_name || 'İSİMSİZ').toUpperCase(),
+            full_name: (s.name || s.full_name || 'İSİMSİZ').toUpperCase()
+          }))
+        );
+        if (allStudents.length > 0) {
+          await saveToSupabase('students', allStudents);
+        }
+      }
+
+      // Courses
+      if (restoredCourses.length > 0) {
+        await saveToSupabase('courses', restoredCourses);
+      }
+
+      // Announcements
+      if (restoredAnnouncements.length > 0) {
+        await saveToSupabase('announcements', restoredAnnouncements);
+      }
+
+      // Schedule
+      if (restoredSchedule.length > 0) {
+        await saveToSupabase('schedule', restoredSchedule);
+      }
+
+      triggerSuccess("DNA_RESTORASYONU_BAŞARILI");
+    } catch (error) {
+      console.error("Restorasyon Hatası:", error);
+      setDbError("RESTORASYON_BAŞARISIZ");
+      // Hata durumunda verileri tekrar çek
+      await fetchData(session.schoolId);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => { if (session) fetchData(session.schoolId); }, [session?.schoolId]);
 
   useEffect(() => {
@@ -482,6 +661,12 @@ const App: React.FC = () => {
 
   const [theme, setTheme] = useState<ThemeConfig>({ mode: ThemeMode.DARK, fontFamily: 'JetBrains Mono', fontScale: 1.0, accentColor: '#3b82f6', gridOpacity: 0.1, isGlowEnabled: true, borderThickness: 1 });
 
+  const isAdmin = useMemo(() => {
+    if (!session?.role) return false;
+    const r = String(session.role).toUpperCase();
+    return r === 'ADMIN' || r === 'İDARECİ' || r === 'IDARECI' || r === 'YÖNETİCİ' || session.role === UserRole.ADMIN;
+  }, [session]);
+
   if (!session) return <AuthTerminal onAuthSuccess={(s) => { setSession(s); localStorage.setItem('senkron_session', JSON.stringify(s)); fetchData(s.schoolId); setActiveModule(s.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW : s.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW : ModuleType.DASHBOARD); }} triggerSuccess={triggerSuccess} />;
 
   if (isLoading) return (
@@ -492,7 +677,7 @@ const App: React.FC = () => {
   );
 
   const renderModule = () => {
-    const commonProps = { editMode: session.role === UserRole.ADMIN ? editMode : false, onWatchModeAttempt: () => triggerSuccess("YETKİ_SINIRI"), onSuccess: triggerSuccess };
+    const commonProps = { editMode: isAdmin ? editMode : false, onWatchModeAttempt: () => triggerSuccess("YETKİ_SINIRI"), onSuccess: triggerSuccess };
 
     if (session.role === UserRole.STUDENT) {
       let studentTab: 'GENEL' | 'DEVAMSIZLIK' | 'KONULAR' | 'SINAVLAR' | 'NOTLARIM' | 'KURSLAR' = 'GENEL';
@@ -543,24 +728,24 @@ const App: React.FC = () => {
       case ModuleType.LESSONS: return <LessonsModule lessons={lessons} setLessons={setLessons} allTeachers={teachers} setTeachers={setTeachers} allClasses={classes} setClasses={setClasses} schedule={finalSchedule} courses={courses} setCourses={setCourses} {...commonProps} />;
       case ModuleType.SCHEDULING: return <SchedulingModule teachers={teachers} classes={classes} lessons={lessons} onApprove={async (s) => { setFinalSchedule(s); triggerSuccess("MÜHÜRLENDİ"); setActiveModule(ModuleType.CLASS_SCHEDULES); }} schoolConfig={schoolConfig} />;
       case ModuleType.GUARD_DUTY: return <GuardDutyModule teachers={teachers} setTeachers={setTeachers} schedule={finalSchedule} schoolConfig={schoolConfig} currentUserId={session?.id} {...commonProps} />;
-      case ModuleType.CLASS_SCHEDULES: return <ClassSchedulesModule schedule={finalSchedule} setSchedule={setFinalSchedule} onDeleteScheduleEntry={deleteScheduleFromSupabase} classes={classes} lessons={lessons} teachers={teachers} schoolConfig={schoolConfig} editMode={session?.role === UserRole.ADMIN && editMode} onSuccess={triggerSuccess} userRole={session?.role} />;
+      case ModuleType.CLASS_SCHEDULES: return <ClassSchedulesModule schedule={finalSchedule} setSchedule={setFinalSchedule} onDeleteScheduleEntry={deleteScheduleFromSupabase} classes={classes} lessons={lessons} teachers={teachers} schoolConfig={schoolConfig} editMode={isAdmin && editMode} onSuccess={triggerSuccess} userRole={session?.role} />;
       case ModuleType.COMMUNICATION: return <CommunicationModule announcements={announcements} setAnnouncements={setAnnouncements} classes={classes} userRole={session.role} currentUserId={session.id} {...commonProps} />;
-      case ModuleType.SETTINGS: return <SettingsModule config={schoolConfig} setConfig={setSchoolConfig} theme={theme} setTheme={setTheme} teachers={teachers} setTeachers={setTeachers} lessons={lessons} setLessons={setLessons} classes={classes} setClasses={setClasses} announcements={announcements} setAnnouncements={setAnnouncements} courses={courses} setCourses={setCourses} schedule={finalSchedule} setSchedule={setFinalSchedule} onRestoreDNA={async (p) => { fetchData(session.schoolId); }} onImportData={handleImportStudents} onClearAll={handleHardReset} onSuccess={triggerSuccess} />;
+      case ModuleType.SETTINGS: return <SettingsModule config={schoolConfig} setConfig={setSchoolConfig} theme={theme} setTheme={setTheme} teachers={teachers} setTeachers={setTeachers} lessons={lessons} setLessons={setLessons} classes={classes} setClasses={setClasses} announcements={announcements} setAnnouncements={setAnnouncements} courses={courses} setCourses={setCourses} schedule={finalSchedule} setSchedule={setFinalSchedule} onRestoreDNA={handleRestoreDNA} onImportData={handleImportStudents} onClearAll={handleHardReset} onSuccess={triggerSuccess} />;
       default: return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} />;
     }
   };
 
   return (
     <div className={`flex h-screen overflow-hidden ${theme.mode === ThemeMode.DARK ? 'bg-[#080c10] text-[#e4e4e7]' : 'bg-[#f3f4f6] text-[#000000]'}`} style={{ fontFamily: `'${theme.fontFamily}', monospace` }}>
-      <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} editMode={session.role === UserRole.ADMIN ? editMode : false} setEditMode={setEditMode} userRole={session.role} dbError={dbError} />
+      <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} editMode={isAdmin ? editMode : false} setEditMode={setEditMode} userRole={session.role} dbError={dbError} />
       <main className="flex-1 flex flex-col overflow-hidden relative bg-grid-hatched">
         <header className="h-10 border-b border-[#354a5f]/40 bg-[#0d141b]/95 backdrop-blur-md z-[60] flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">{session.role === UserRole.ADMIN && (<button onClick={() => setEditMode(!editMode)} className={`px-3 h-6 text-[8px] font-black uppercase tracking-[0.2em] border ${editMode ? 'bg-[#3b82f6] text-white' : 'bg-[#fcd34d] text-black'}`}>{editMode ? 'EDİTÖR' : 'İZLEME'}</button>)}
+          <div className="flex items-center gap-3">{isAdmin && (<button onClick={() => setEditMode(!editMode)} className={`px-3 h-6 text-[8px] font-black uppercase tracking-[0.2em] border ${editMode ? 'bg-[#3b82f6] text-white' : 'bg-[#fcd34d] text-black'}`}>{editMode ? 'EDİTÖR' : 'İZLEME'}</button>)}
             <h2 className="text-[9px] font-black tracking-[0.4em] uppercase text-white">{activeModule.replace('STUDENT_', '').replace('TEACHER_', '').replace('_', ' ')}</h2></div>
           <div className="flex items-center gap-4">
             {isSyncing && <div className="flex items-center gap-2 mr-2"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div><span className="text-[6px] font-black text-green-500 uppercase tracking-widest">DNA_YAZILIYOR...</span></div>}
             {isBackgroundLoading && <div className="flex items-center gap-2 mr-2"><i className="fa-solid fa-cloud-arrow-down text-[#3b82f6] text-[10px] animate-bounce"></i><span className="text-[6px] font-black text-[#3b82f6] uppercase tracking-widest">DETAYLAR_İNDİRİLİYOR...</span></div>}
-            <div className="text-right"><span className="text-[9px] font-black text-white uppercase block">{session.name}</span><span className="text-[6px] text-[#3b82f6] font-bold uppercase">{session.schoolId}</span></div>
+            <div className="text-right"><span className="text-[9px] font-black text-white uppercase block" title={`Role: ${session.role}`}>{session.name}</span><span className="text-[6px] text-[#3b82f6] font-bold uppercase">{session.schoolId}</span></div>
             <button onClick={async () => { await supabase.auth.signOut(); localStorage.clear(); setSession(null); }} className="text-red-500/50 hover:text-red-500 transition-colors"><i className="fa-solid fa-power-off"></i></button></div>
         </header>
         {successStamp && (<div className="fixed inset-0 pointer-events-none z-[2000] flex items-center justify-center bg-black/10 backdrop-blur-[2px]"><div className="bg-[#3b82f6]/10 border-4 border-[#3b82f6] p-12 shadow-[0_0_100px_rgba(59,130,246,0.4)] animate-in zoom-in duration-300"><span className="text-4xl font-black text-white uppercase tracking-widest leading-none">{successStamp}</span></div></div>)}

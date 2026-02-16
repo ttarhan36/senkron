@@ -232,6 +232,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
       return examsList.sort((a, b) => {
          // Simple date parse for sort
          const parseDate = (d: string) => {
+            if (!d) return 0;
             if (d.includes('-')) { const p = d.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getTime(); }
             const p = d.split('.'); return new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime();
          };
@@ -810,11 +811,14 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
                            // DATE LOGIC
                            let examDateObj: Date;
-                           if (exam.date.includes('-')) {
-                              const parts = exam.date.split('-');
+                           const d = exam.date || '';
+                           if (!d) {
+                              examDateObj = new Date();
+                           } else if (d.includes('-')) {
+                              const parts = d.split('-');
                               examDateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
                            } else {
-                              const parts = exam.date.split('.');
+                              const parts = d.split('.');
                               examDateObj = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
                            }
 
@@ -833,8 +837,8 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#fbbf24]"></div>
                                     <div className="flex items-center gap-4">
                                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-black/20 border border-white/10 rounded-sm">
-                                          <span className="text-[14px] font-black text-white">{exam.date.split('.')[0]}</span>
-                                          <span className="text-[6px] font-bold text-slate-500 uppercase">{exam.date.split('.')[1] || 'AY'}</span>
+                                          <span className="text-[14px] font-black text-white">{(exam.date || '').split('.')[0]}</span>
+                                          <span className="text-[6px] font-bold text-slate-500 uppercase">{(exam.date || '').split('.')[1] || 'AY'}</span>
                                        </div>
                                        <div className="flex flex-col">
                                           <span className="text-[11px] font-medium text-white uppercase">{exam.lessonName}</span>
@@ -1024,7 +1028,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                         <div className="w-px h-4 bg-white/10"></div>
                         <div className="flex items-center gap-1.5 ml-2"><i className="fa-solid fa-venus text-pink-500 text-[10px]"></i><span className="text-[10px] font-black text-white">{teacherStats.female}</span></div>
                      </div>
-                     <button onClick={handleOpenAdd} className="px-5 h-11 bg-[#3b82f6] text-white font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all hover:brightness-110"><i className="fa-solid fa-plus mr-2"></i> EKLE</button>
+                     {editMode && <button onClick={handleOpenAdd} className="px-5 h-11 bg-[#3b82f6] text-white font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all hover:brightness-110"><i className="fa-solid fa-plus mr-2"></i> EKLE</button>}
                   </div>
                   <div className="flex gap-1.5 px-0.5">{['TÜMÜ', ShiftType.SABAH, ShiftType.OGLE].map(f => (<button key={f} onClick={() => setShiftFilter(f as any)} className={`flex-1 h-9 text-[9px] font-black uppercase tracking-widest border transition-all ${shiftFilter === f ? 'bg-[#3b82f6] border-[#3b82f6] text-white shadow-lg' : 'bg-black/40 border-[#354a5f] text-slate-500 hover:bg-[#1e2e3d]'}`}>{f === 'TÜMÜ' ? 'TÜM' : f}</button>))}</div>
                </div>
