@@ -1,117 +1,113 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Senkron 2.2.0 - Theme Engine v13</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700;900&display=swap');
-      
-      :root {
-        --bg-deep: #000000;
-        --bg-panel: #0f172a;
-        --bg-card: #1e293b;
-        --bg-surface: #334155;
-        --accent: #3b82f6;
-        --border: #64748b;
-        --text-secondary: #f1f5f9;
-        --text-vivid: #fbbf24;
-        --grid-opacity: 0.1;
-        --font-scale: 1.0;
-        --glow-opacity: 1;
-        --border-width: 1px;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Senkron 2.2.0 - Theme Engine v13</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;700;900&family=Montserrat:wght@400;700;900&family=Roboto:wght@400;700;900&display=swap');
+
+    :root {
+      --bg-deep: #000000;
+      --bg-panel: #0f172a;
+      --bg-card: #1e293b;
+      --bg-surface: #334155;
+      --accent: #3b82f6;
+      --border: #64748b;
+      --text-secondary: #f1f5f9;
+      --text-vivid: #fbbf24;
+      --grid-opacity: 0.1;
+      --font-scale: 1.0;
+      --glow-opacity: 1;
+      --border-width: 1px;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-deep);
+      color: var(--text-secondary);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: -0.02em;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .bg-grid-hatched {
+      background-image:
+        linear-gradient(rgba(255, 255, 255, var(--grid-opacity)) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, var(--grid-opacity)) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+
+    .print-layout {
+      display: none !important;
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 1cm;
       }
 
-      html, body {
-        margin: 0;
-        padding: 0;
-        background-color: var(--bg-deep);
-        color: var(--text-secondary);
-        font-family: 'JetBrains Mono', monospace;
-        letter-spacing: -0.02em;
-        -webkit-font-smoothing: antialiased;
+      body * {
+        visibility: hidden !important;
       }
 
-      .bg-grid-hatched {
-        background-image: 
-          linear-gradient(rgba(255, 255, 255, var(--grid-opacity)) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, var(--grid-opacity)) 1px, transparent 1px);
-        background-size: 20px 20px;
+      .print-layout,
+      .print-layout * {
+        visibility: visible !important;
+        display: block !important;
       }
 
       .print-layout {
-        display: none !important;
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        background: white !important;
+        color: black !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
 
-      @media print {
-        @page {
-          size: A4;
-          margin: 1cm;
-        }
-        body * {
-          visibility: hidden !important;
-        }
-        .print-layout, .print-layout * {
-          visibility: visible !important;
-          display: block !important;
-        }
-        .print-layout {
-          display: block !important;
-          position: absolute !important;
-          left: 0 !important;
-          top: 0 !important;
-          width: 100% !important;
-          background: white !important;
-          color: black !important;
-          padding: 0 !important;
-          margin: 0 !important;
-        }
-        .print-layout table {
-          display: table !important;
-          width: 100% !important;
-          border-collapse: collapse !important;
-          border: 2px solid black !important;
-        }
-        .print-layout tr {
-          display: table-row !important;
-        }
-        .print-layout th, .print-layout td {
-          display: table-cell !important;
-          border: 1px solid black !important;
-          padding: 8px !important;
-          text-transform: uppercase !important;
-          font-family: Arial, sans-serif !important;
-          color: black !important;
-        }
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
+      .print-layout table {
+        display: table !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+        border: 2px solid black !important;
       }
 
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
+      .print-layout tr {
+        display: table-row !important;
       }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "xlsx": "https://esm.sh/xlsx@0.18.5",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.45.1",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4",
-    "vite": "https://esm.sh/vite@^7.3.1"
-  }
-}
-</script>
-</head>
-  <body>
-    <div id="root"></div>
+
+      .print-layout th,
+      .print-layout td {
+        display: table-cell !important;
+        border: 1px solid black !important;
+        padding: 8px !important;
+        text-transform: uppercase !important;
+        font-family: Arial, sans-serif !important;
+        color: black !important;
+      }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
   </body>
+
 </html>

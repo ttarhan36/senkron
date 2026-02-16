@@ -28,6 +28,10 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
   const [usernameInput, setUsernameInput] = useState('');
   const [userPasswordInput, setUserPasswordInput] = useState('');
 
+  // MASTER bypass - Okul Seçim
+  const [masterSchoolList, setMasterSchoolList] = useState<{ id: string, name: string }[]>([]);
+  const [showSchoolPicker, setShowSchoolPicker] = useState(false);
+
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -35,16 +39,40 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
 
     const input = email.trim().toUpperCase();
 
-    // MASTER BYPASS
+    // MASTER BYPASS - Okul seçimi gerektirir
     if (input === 'MASTER' || input === '999') {
-      onAuthSuccess({
-        role: UserRole.ADMIN,
-        id: 'MASTER-ID',
-        name: 'MASTER_ADMİN (TEST)',
-        schoolId: 'MASTER_SCHOOL_001',
-        email: 'master@senkon.ai'
-      });
-      triggerSuccess("TEST_DNA_AKTİF");
+      try {
+        const { data: schoolsList, error: schoolsErr } = await supabase.from('schools').select('id, name');
+        if (schoolsErr) throw schoolsErr;
+
+        if (!schoolsList || schoolsList.length === 0) {
+          // Hiç okul yoksa varsayılan oluştur
+          onAuthSuccess({
+            role: UserRole.ADMIN,
+            id: 'MASTER-ID',
+            name: 'MASTER_ADMİN',
+            schoolId: 'MASTER_SCHOOL_001',
+            email: 'master@senkron.ai'
+          });
+          triggerSuccess("TEST_DNA_AKTİF");
+        } else if (schoolsList.length === 1) {
+          // Tek okul varsa direkt gir
+          onAuthSuccess({
+            role: UserRole.ADMIN,
+            id: 'MASTER-ID',
+            name: `MASTER (${schoolsList[0].name})`,
+            schoolId: schoolsList[0].id,
+            email: 'master@senkron.ai'
+          });
+          triggerSuccess(`${schoolsList[0].name} SEÇİLDİ`);
+        } else {
+          // Birden fazla okul varsa, seçim listesini göster
+          setMasterSchoolList(schoolsList);
+          setShowSchoolPicker(true);
+        }
+      } catch (err: any) {
+        setError("OKUL LİSTESİ ALINAMADI");
+      }
       setLoading(false);
       return;
     }
@@ -58,7 +86,7 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
       if (authError) throw new Error("GİRİŞ BİLGİLERİ GEÇERSİZ");
 
       const user = data.user;
-      
+
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('*')
@@ -148,7 +176,7 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
           .eq('password', uPass)
           .or(`username.eq.${uName},number.eq.${uName}`)
           .maybeSingle();
-        
+
         if (error || !data) throw new Error("KULLANICI ADI/NO VEYA ŞİFRE HATALI");
         student = data;
       } else {
@@ -174,7 +202,7 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
 
       onAuthSuccess({
         role: UserRole.STUDENT,
-        id: student.number, 
+        id: student.number,
         name: student.name,
         schoolId: targetSchoolId
       });
@@ -234,7 +262,7 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
           throw new Error("KULLANICI ADI VEYA ŞİFRE HATALI");
         }
       }
-      
+
       onAuthSuccess({
         role: UserRole.TEACHER,
         id: teacher.id,
@@ -261,7 +289,7 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
     <div className="h-screen w-screen bg-[#080c10] flex items-center justify-center p-4 bg-grid-hatched overflow-hidden">
       <div className="bg-[#0f172a] border border-[#354a5f] max-w-md w-full shadow-2xl flex flex-col relative animate-in zoom-in-95 duration-500 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1 bg-[#3b82f6] shadow-[0_0_20px_#3b82f6]"></div>
-        
+
         {/* HEADER */}
         <div className="p-8 pb-4 text-center">
           <h1 className="text-3xl font-black text-white uppercase tracking-[0.4em] mb-2">SENKRON</h1>
@@ -302,21 +330,21 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
                 <div className="space-y-1"><label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">YÖNETİCİ AD SOYAD</label><input required className="w-full h-11 bg-black border border-[#354a5f] px-4 text-white font-black text-[11px] uppercase outline-none focus:border-[#fbbf24]" placeholder="TAM AD..." value={fullName} onChange={e => setFullName(e.target.value)} /></div>
                 <div className="space-y-1"><label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">E-POSTA</label><input type="email" required className="w-full h-11 bg-black border border-[#354a5f] px-4 text-white font-black text-[11px] uppercase outline-none focus:border-[#fbbf24]" placeholder="E-POSTA..." value={email} onChange={e => setEmail(e.target.value)} /></div>
                 <div className="space-y-1">
-                    <label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">ŞİFRE</label>
-                    <div className="relative">
-                        <input type={showPassword ? "text" : "password"} required className="w-full h-11 bg-black border border-[#354a5f] px-4 text-white font-black text-[11px] outline-none focus:border-[#fbbf24]" placeholder="******" value={password} onChange={e => setPassword(e.target.value)} />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
-                    </div>
+                  <label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">ŞİFRE</label>
+                  <div className="relative">
+                    <input type={showPassword ? "text" : "password"} required className="w-full h-11 bg-black border border-[#354a5f] px-4 text-white font-black text-[11px] outline-none focus:border-[#fbbf24]" placeholder="******" value={password} onChange={e => setPassword(e.target.value)} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
+                  </div>
                 </div>
                 {error && <div className="p-3 bg-red-900/20 border border-red-500/20 text-red-500 text-[9px] font-black uppercase text-center">{error}</div>}
                 <button disabled={loading} className="w-full h-14 bg-[#fbbf24] text-black font-black text-[11px] uppercase tracking-[0.3em] hover:brightness-110 shadow-xl transition-all">{loading ? 'KAYDEDİLİYOR...' : 'OKULU_KAYDET'}</button>
                 <div className="text-center pt-2"><button type="button" onClick={() => setMode('LOGIN')} className="text-[8px] font-black text-slate-500 hover:text-white uppercase tracking-widest">GİRİŞ EKRANINA DÖN</button></div>
               </form>
             ) : (
-              <form onSubmit={async (e) => { e.preventDefault(); setLoading(true); try { await supabase.auth.resetPasswordForEmail(email); triggerSuccess("LİNK GÖNDERİLDİ"); setMode('LOGIN'); } catch(err:any){ setError(err.message); } finally { setLoading(false); } }} className="space-y-5 animate-in fade-in">
-                 <div className="space-y-1"><label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">E-POSTA</label><input type="email" required className="w-full h-12 bg-black border border-[#354a5f] px-4 text-white font-black text-[12px] outline-none focus:border-[#3b82f6]" placeholder="E-POSTA..." value={email} onChange={e => setEmail(e.target.value)} /></div>
-                 <button disabled={loading} className="w-full h-14 bg-white text-black font-black text-[11px] uppercase tracking-[0.3em] hover:brightness-110 shadow-xl transition-all">SIFIRLAMA LİNKİ GÖNDER</button>
-                 <div className="text-center pt-2"><button type="button" onClick={() => setMode('LOGIN')} className="text-[8px] font-black text-slate-500 hover:text-white uppercase tracking-widest">VAZGEÇ</button></div>
+              <form onSubmit={async (e) => { e.preventDefault(); setLoading(true); try { await supabase.auth.resetPasswordForEmail(email); triggerSuccess("LİNK GÖNDERİLDİ"); setMode('LOGIN'); } catch (err: any) { setError(err.message); } finally { setLoading(false); } }} className="space-y-5 animate-in fade-in">
+                <div className="space-y-1"><label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">E-POSTA</label><input type="email" required className="w-full h-12 bg-black border border-[#354a5f] px-4 text-white font-black text-[12px] outline-none focus:border-[#3b82f6]" placeholder="E-POSTA..." value={email} onChange={e => setEmail(e.target.value)} /></div>
+                <button disabled={loading} className="w-full h-14 bg-white text-black font-black text-[11px] uppercase tracking-[0.3em] hover:brightness-110 shadow-xl transition-all">SIFIRLAMA LİNKİ GÖNDER</button>
+                <div className="text-center pt-2"><button type="button" onClick={() => setMode('LOGIN')} className="text-[8px] font-black text-slate-500 hover:text-white uppercase tracking-widest">VAZGEÇ</button></div>
               </form>
             )
           )}
@@ -340,8 +368,8 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
               <div className="space-y-1">
                 <label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">ŞİFRE</label>
                 <div className="relative">
-                    <input type={showPassword ? "text" : "password"} required className="w-full h-12 bg-black border border-[#354a5f] px-4 text-white font-black text-[12px] outline-none focus:border-[#3b82f6] placeholder:text-slate-700" placeholder="******" value={userPasswordInput} onChange={e => setUserPasswordInput(e.target.value)} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
+                  <input type={showPassword ? "text" : "password"} required className="w-full h-12 bg-black border border-[#354a5f] px-4 text-white font-black text-[12px] outline-none focus:border-[#3b82f6] placeholder:text-slate-700" placeholder="******" value={userPasswordInput} onChange={e => setUserPasswordInput(e.target.value)} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
                 </div>
               </div>
               {error && <div className="p-3 bg-red-900/20 border border-red-500/20 text-red-500 text-[9px] font-black uppercase text-center">{error}</div>}
@@ -370,8 +398,8 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
               <div className="space-y-1">
                 <label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">ŞİFRE</label>
                 <div className="relative">
-                    <input type={showPassword ? "text" : "password"} required className="w-full h-12 bg-black border border-[#354a5f] px-4 text-white font-black text-[14px] outline-none focus:border-[#3b82f6] placeholder:text-slate-700 tracking-widest" placeholder="******" value={userPasswordInput} onChange={e => setUserPasswordInput(e.target.value)} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
+                  <input type={showPassword ? "text" : "password"} required className="w-full h-12 bg-black border border-[#354a5f] px-4 text-white font-black text-[14px] outline-none focus:border-[#3b82f6] placeholder:text-slate-700 tracking-widest" placeholder="******" value={userPasswordInput} onChange={e => setUserPasswordInput(e.target.value)} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"><i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i></button>
                 </div>
               </div>
               {error && <div className="p-3 bg-red-900/20 border border-red-500/20 text-red-500 text-[9px] font-black uppercase text-center">{error}</div>}
@@ -382,6 +410,54 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
           )}
         </div>
       </div>
+
+      {/* MASTER OKUL SEÇİM MODALI */}
+      {showSchoolPicker && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
+          <div className="bg-[#0d141b] border-2 border-[#fbbf24] p-6 max-w-md w-full shadow-2xl animate-in zoom-in-95 rounded-sm">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-[14px] font-black text-white uppercase tracking-widest">OKUL SEÇİMİ</h3>
+                <span className="text-[8px] font-black text-[#fbbf24] uppercase tracking-[0.4em] mt-2 block">MASTER MOD - HEDEF OKUL SEÇİNİZ</span>
+              </div>
+              <button onClick={() => setShowSchoolPicker(false)} className="w-10 h-10 border border-white/10 text-white/40 hover:text-white transition-all"><i className="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+              {masterSchoolList.map(school => (
+                <button
+                  key={school.id}
+                  onClick={() => {
+                    onAuthSuccess({
+                      role: UserRole.ADMIN,
+                      id: 'MASTER-ID',
+                      name: `MASTER (${school.name})`,
+                      schoolId: school.id,
+                      email: 'master@senkron.ai'
+                    });
+                    setShowSchoolPicker(false);
+                    triggerSuccess(`${school.name} SEÇİLDİ`);
+                  }}
+                  className="w-full p-4 bg-[#1e293b] border border-white/10 text-left hover:border-[#fbbf24] hover:bg-[#fbbf24]/10 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[13px] font-black text-white uppercase block">{school.name}</span>
+                      <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1 block">{school.id}</span>
+                    </div>
+                    <i className="fa-solid fa-chevron-right text-slate-600 group-hover:text-[#fbbf24] transition-all"></i>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="mt-4 p-3 bg-red-900/20 border border-red-500/20">
+              <p className="text-[8px] font-black text-red-400 uppercase text-center tracking-widest">
+                <i className="fa-solid fa-triangle-exclamation mr-2"></i>
+                DİKKAT: SEÇTİĞİNİZ OKULA AİT VERİLER YÜKLENECEKTİR
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

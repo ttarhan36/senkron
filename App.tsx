@@ -25,11 +25,11 @@ const App: React.FC = () => {
   });
 
   const [activeModule, setActiveModule] = useState<ModuleType>(
-    session?.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW : 
-    session?.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW : 
-    ModuleType.DASHBOARD
+    session?.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW :
+      session?.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW :
+        ModuleType.DASHBOARD
   );
-  
+
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [classes, setClasses] = useState<ClassSection[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -37,7 +37,7 @@ const App: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [schoolConfig, setSchoolConfig] = useState<SchoolConfig>(DEFAULT_DNA);
   const [finalSchedule, setFinalSchedule] = useState<ScheduleEntry[]>([]);
-  
+
   const [editMode, setEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(!!session);
   const [isBackgroundLoading, setIsBackgroundLoading] = useState(false); // Yeni durum: Arka plan yüklemesi
@@ -57,12 +57,18 @@ const App: React.FC = () => {
         ...c,
         lessonLogs: c.lessonLogs || [] // Ensure valid array
       })));
-      
-      const allStudents = classes.flatMap(cls => 
+
+      const allStudents = classes.flatMap(cls =>
         (cls.students || []).map(s => {
           const stName = (s.name || '').toUpperCase().trim();
+          // GÜVENLİK: Eğer öğrencinin mevcut school_id'si farklı bir okula aitse, bu öğrenciyi SENKRONLAMA
+          const existingSchoolId = (s as any).school_id;
+          if (existingSchoolId && existingSchoolId !== session.schoolId) {
+            console.warn(`[SCHOOL_ID_MISMATCH] Öğrenci ${s.name} (${s.number}) farklı okula ait: ${existingSchoolId} vs ${session.schoolId}. Atlama yapılıyor.`);
+            return null; // Bu öğrenciyi atla
+          }
           return { ...s, class_id: cls.id, school_id: session.schoolId, name: stName, full_name: stName };
-        })
+        }).filter(Boolean)
       );
 
       await Promise.all([
@@ -83,9 +89,9 @@ const App: React.FC = () => {
     }
   };
 
-  const triggerSuccess = (msg: string = "MÜHÜRLENDİ") => { 
-    setSuccessStamp(msg); 
-    setTimeout(() => setSuccessStamp(null), 1200); 
+  const triggerSuccess = (msg: string = "MÜHÜRLENDİ") => {
+    setSuccessStamp(msg);
+    setTimeout(() => setSuccessStamp(null), 1200);
   };
 
   const deleteFromSupabase = async (table: string, id: string) => {
@@ -157,24 +163,24 @@ const App: React.FC = () => {
       if (table === 'announcements') {
         newItem.isPinned = !!item.is_pinned;
         newItem.readCount = Number(item.read_count || 0);
-        
+
         // Veritabanı "bigint" (sayı) döner, ancak eski kayıtlar string olabilir.
         if (item.timestamp) {
-            if (typeof item.timestamp === 'string') {
-                 // Eski ISO string kayıtlarını kurtarmak için
-                 const date = new Date(item.timestamp);
-                 if (!isNaN(date.getTime())) {
-                     newItem.timestamp = date.getTime();
-                 } else {
-                     // String içinde sayı varsa parse et
-                     newItem.timestamp = parseInt(item.timestamp) || Date.now();
-                 }
+          if (typeof item.timestamp === 'string') {
+            // Eski ISO string kayıtlarını kurtarmak için
+            const date = new Date(item.timestamp);
+            if (!isNaN(date.getTime())) {
+              newItem.timestamp = date.getTime();
             } else {
-                 // Doğrudan sayı gelirse
-                 newItem.timestamp = Number(item.timestamp);
+              // String içinde sayı varsa parse et
+              newItem.timestamp = parseInt(item.timestamp) || Date.now();
             }
+          } else {
+            // Doğrudan sayı gelirse
+            newItem.timestamp = Number(item.timestamp);
+          }
         } else {
-            newItem.timestamp = Date.now();
+          newItem.timestamp = Date.now();
         }
       }
       return newItem;
@@ -184,6 +190,13 @@ const App: React.FC = () => {
   const mapToDB = (table: string, item: any) => {
     const sid = session?.schoolId;
     if (!sid) return null;
+
+    // GÜVENLİK: Eğer kaydın mevcut school_id'si farklı bir okula aitse, bu kaydı KAYDETME
+    if (item.school_id && item.school_id !== sid) {
+      console.warn(`[CROSS_SCHOOL_BLOCK] ${table} kaydı farklı okula ait: ${item.school_id} vs ${sid}. Kayıt engellendi.`);
+      return null;
+    }
+
     let dbItem: any = { school_id: sid };
     if (table === 'teachers') {
       dbItem.id = item.id;
@@ -254,7 +267,7 @@ const App: React.FC = () => {
       dbItem.audience = item.audience || 'ALL';
       dbItem.is_pinned = !!item.isPinned;
       dbItem.read_count = Number(item.readCount || 0);
-      
+
       // location sütunu veritabanında yoksa hata verir, geçici olarak kapatıyoruz.
       // SQL ile sütunu eklerseniz bu satırı açabilirsiniz: 
       // dbItem.location = item.location || ''; 
@@ -278,25 +291,25 @@ const App: React.FC = () => {
     try {
       const dbData = Array.isArray(data) ? data.map(i => mapToDB(table, i)).filter(Boolean) : [mapToDB(table, data)].filter(Boolean);
       if (dbData.length === 0 && table !== 'schedule') return;
-      
+
       const { error } = await supabase.from(table).upsert(dbData, { onConflict: table === 'schedule' ? 'school_id,sinif,gun,ders_saati' : table === 'school_config' ? 'school_id' : 'id' });
-      
-      if (error) { 
-        console.error(`DB Write Fail [${table}]:`, error.message); 
+
+      if (error) {
+        console.error(`DB Write Fail [${table}]:`, error.message);
         // Hata detayını yakala
         if (error.code === '42703') { // Undefined column
-             setDbError(`DB_ŞEMA_HATASI: ${table.toUpperCase()} tablosunda sütun eksik.`);
+          setDbError(`DB_ŞEMA_HATASI: ${table.toUpperCase()} tablosunda sütun eksik.`);
         } else {
-             setDbError(`ERR_${table.toUpperCase()}`); 
+          setDbError(`ERR_${table.toUpperCase()}`);
         }
-        throw error; 
+        throw error;
       }
     } catch (err: any) { console.error(`Supabase Fatal:`, err); throw err; }
   };
 
   const distributeStudentsToClasses = (students: Student[], classesData: ClassSection[]) => {
     const studentsByClass: Record<string, Student[]> = {};
-    
+
     for (const s of students) {
       const cId = s.class_id || s.classId;
       if (cId) {
@@ -305,10 +318,10 @@ const App: React.FC = () => {
       }
     }
 
-    return classesData.map(cls => ({ 
-      ...cls, 
-      students: studentsByClass[cls.id] || cls.students || [], 
-      assignments: cls.assignments || [], 
+    return classesData.map(cls => ({
+      ...cls,
+      students: studentsByClass[cls.id] || cls.students || [],
+      assignments: cls.assignments || [],
       exams: cls.exams || [],
       lessonLogs: cls.lessonLogs || []
     }));
@@ -336,11 +349,11 @@ const App: React.FC = () => {
       setAnnouncements(mapFromDB('announcements', annRes.data || []));
       setFinalSchedule(mapFromDB('schedule', schRes.data || []));
       setSchoolConfig(cfgRes.data?.config_json || DEFAULT_DNA);
-      
+
       const mappedClasses = mapFromDB('classes', cRes.data || []);
       const liteStudents = mapFromDB('students', sResLite.data || []);
       const initialClasses = distributeStudentsToClasses(liteStudents, mappedClasses);
-      
+
       setClasses(initialClasses);
       isDataInitialized.current = true;
       triggerSuccess("DNA_BAĞLANDI");
@@ -382,25 +395,25 @@ const App: React.FC = () => {
   };
 
   // ... (handleImportStudents, handleHardReset unchanged)
-  
+
   const handleImportStudents = (
-    newStudents: Student[], 
-    subeMap: Record<string, string>, 
+    newStudents: Student[],
+    subeMap: Record<string, string>,
     shiftMap: Record<string, ShiftType>
   ) => {
     setClasses(prevClasses => {
-      const updatedClasses = prevClasses.map(c => ({...c, students: [...(c.students || [])]}));
-      
+      const updatedClasses = prevClasses.map(c => ({ ...c, students: [...(c.students || [])] }));
+
       newStudents.forEach(student => {
         const targetClassName = subeMap[student.id] || '9-A';
         const targetShift = shiftMap[student.id] || ShiftType.SABAH;
-        
+
         let targetClass = updatedClasses.find(c => c.name === targetClassName);
-        
+
         if (!targetClass) {
           const grade = parseInt(targetClassName.match(/\d+/)?.[0] || '9');
           targetClass = {
-            id: `C-IMP-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+            id: `C-IMP-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
             name: targetClassName,
             grade: grade,
             type: 'ANADOLU',
@@ -412,13 +425,13 @@ const App: React.FC = () => {
           };
           updatedClasses.push(targetClass);
         }
-        
+
         const studentWithClass = { ...student, classId: targetClass.id, class_id: targetClass.id };
         if (!targetClass.students) targetClass.students = [];
         targetClass.students.push(studentWithClass);
       });
-      
-      return updatedClasses.sort((a,b) => a.name.localeCompare(b.name));
+
+      return updatedClasses.sort((a, b) => a.name.localeCompare(b.name));
     });
     triggerSuccess(`${newStudents.length} ÖĞRENCİ İÇERİ AKTARILDI`);
   };
@@ -431,7 +444,7 @@ const App: React.FC = () => {
       await Promise.all([
         supabase.from('schedule').delete().eq('school_id', sid),
         supabase.from('announcements').delete().eq('school_id', sid),
-        supabase.from('students').delete().eq('school_id', sid), 
+        supabase.from('students').delete().eq('school_id', sid),
       ]);
       await Promise.all([
         supabase.from('classes').delete().eq('school_id', sid),
@@ -463,12 +476,12 @@ const App: React.FC = () => {
     if (!isDataInitialized.current || !session) return;
     if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current);
     // Reduced timeout to 1000ms to prevent data loss on quick navigation
-    syncTimeoutRef.current = window.setTimeout(() => { syncNow(); }, 1000); 
+    syncTimeoutRef.current = window.setTimeout(() => { syncNow(); }, 1000);
     return () => { if (syncTimeoutRef.current) window.clearTimeout(syncTimeoutRef.current); };
   }, [teachers, classes, lessons, courses, announcements, finalSchedule, schoolConfig, session]);
 
   const [theme, setTheme] = useState<ThemeConfig>({ mode: ThemeMode.DARK, fontFamily: 'JetBrains Mono', fontScale: 1.0, accentColor: '#3b82f6', gridOpacity: 0.1, isGlowEnabled: true, borderThickness: 1 });
-  
+
   if (!session) return <AuthTerminal onAuthSuccess={(s) => { setSession(s); localStorage.setItem('senkron_session', JSON.stringify(s)); fetchData(s.schoolId); setActiveModule(s.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW : s.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW : ModuleType.DASHBOARD); }} triggerSuccess={triggerSuccess} />;
 
   if (isLoading) return (
@@ -480,45 +493,45 @@ const App: React.FC = () => {
 
   const renderModule = () => {
     const commonProps = { editMode: session.role === UserRole.ADMIN ? editMode : false, onWatchModeAttempt: () => triggerSuccess("YETKİ_SINIRI"), onSuccess: triggerSuccess };
-    
-    if (session.role === UserRole.STUDENT) {
-        let studentTab: 'GENEL' | 'DEVAMSIZLIK' | 'KONULAR' | 'SINAVLAR' | 'NOTLARIM' | 'KURSLAR' = 'GENEL';
-        if (activeModule === ModuleType.STUDENT_ATTENDANCE) studentTab = 'DEVAMSIZLIK';
-        if (activeModule === ModuleType.STUDENT_TOPICS) studentTab = 'KONULAR';
-        if (activeModule === ModuleType.STUDENT_EXAMS) studentTab = 'SINAVLAR';
-        if (activeModule === ModuleType.STUDENT_GRADES) studentTab = 'NOTLARIM';
-        if (activeModule === ModuleType.STUDENT_COURSES) studentTab = 'KURSLAR';
-        
-        if (activeModule === ModuleType.COMMUNICATION) {
-             return <CommunicationModule announcements={announcements} setAnnouncements={setAnnouncements} classes={classes} userRole={session.role} currentUserId={session.id} {...commonProps} />;
-        }
-        if (activeModule === ModuleType.CLASS_SCHEDULES) {
-             return <ClassSchedulesModule schedule={finalSchedule} setSchedule={setFinalSchedule} onDeleteScheduleEntry={deleteScheduleFromSupabase} classes={classes} lessons={lessons} teachers={teachers} schoolConfig={schoolConfig} editMode={false} onSuccess={triggerSuccess} userRole={session.role} initialClass={classes.find(c => c.students?.some(s => s.number === session.id))?.name} />;
-        }
 
-        return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session.role} userName={session.name} userId={session.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} studentTab={studentTab} />;
+    if (session.role === UserRole.STUDENT) {
+      let studentTab: 'GENEL' | 'DEVAMSIZLIK' | 'KONULAR' | 'SINAVLAR' | 'NOTLARIM' | 'KURSLAR' = 'GENEL';
+      if (activeModule === ModuleType.STUDENT_ATTENDANCE) studentTab = 'DEVAMSIZLIK';
+      if (activeModule === ModuleType.STUDENT_TOPICS) studentTab = 'KONULAR';
+      if (activeModule === ModuleType.STUDENT_EXAMS) studentTab = 'SINAVLAR';
+      if (activeModule === ModuleType.STUDENT_GRADES) studentTab = 'NOTLARIM';
+      if (activeModule === ModuleType.STUDENT_COURSES) studentTab = 'KURSLAR';
+
+      if (activeModule === ModuleType.COMMUNICATION) {
+        return <CommunicationModule announcements={announcements} setAnnouncements={setAnnouncements} classes={classes} userRole={session.role} currentUserId={session.id} {...commonProps} />;
+      }
+      if (activeModule === ModuleType.CLASS_SCHEDULES) {
+        return <ClassSchedulesModule schedule={finalSchedule} setSchedule={setFinalSchedule} onDeleteScheduleEntry={deleteScheduleFromSupabase} classes={classes} lessons={lessons} teachers={teachers} schoolConfig={schoolConfig} editMode={false} onSuccess={triggerSuccess} userRole={session.role} initialClass={classes.find(c => c.students?.some(s => s.number === session.id))?.name} />;
+      }
+
+      return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session.role} userName={session.name} userId={session.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} studentTab={studentTab} />;
     }
 
     if (session.role === UserRole.TEACHER) {
-      if (activeModule === ModuleType.TEACHER_OVERVIEW || 
-          activeModule === ModuleType.TEACHER_AGENDA || 
-          activeModule === ModuleType.TEACHER_CLASSES || 
-          activeModule === ModuleType.TEACHER_EXAMS ||
-          activeModule === ModuleType.TEACHER_SCHEDULE || 
-          activeModule === ModuleType.TEACHER_CONSTRAINTS ||
-          activeModule === ModuleType.TEACHER_PERFORMANCE ||
-          activeModule === ModuleType.TEACHER_STUDENTS) {
-            
-            let teacherTab = 'GENEL';
-            if (activeModule === ModuleType.TEACHER_AGENDA) teacherTab = 'AJANDA';
-            if (activeModule === ModuleType.TEACHER_CLASSES) teacherTab = 'ŞUBE';
-            if (activeModule === ModuleType.TEACHER_EXAMS) teacherTab = 'SINAVLAR';
-            if (activeModule === ModuleType.TEACHER_SCHEDULE) teacherTab = 'PLAN';
-            if (activeModule === ModuleType.TEACHER_CONSTRAINTS) teacherTab = 'KISIT';
-            if (activeModule === ModuleType.TEACHER_PERFORMANCE) teacherTab = 'PERFORMANS';
-            if (activeModule === ModuleType.TEACHER_STUDENTS) teacherTab = 'ÖĞRENCİLER';
+      if (activeModule === ModuleType.TEACHER_OVERVIEW ||
+        activeModule === ModuleType.TEACHER_AGENDA ||
+        activeModule === ModuleType.TEACHER_CLASSES ||
+        activeModule === ModuleType.TEACHER_EXAMS ||
+        activeModule === ModuleType.TEACHER_SCHEDULE ||
+        activeModule === ModuleType.TEACHER_CONSTRAINTS ||
+        activeModule === ModuleType.TEACHER_PERFORMANCE ||
+        activeModule === ModuleType.TEACHER_STUDENTS) {
 
-            return <TeachersModule teachers={teachers} setTeachers={setTeachers} classes={classes} setClasses={setClasses} schedule={finalSchedule} allClasses={classes} allLessons={lessons} schoolConfig={schoolConfig} onDeleteTeacherDB={(id) => deleteFromSupabase('teachers', id)} userRole={session?.role} currentUserId={session?.id} activeTab={teacherTab} {...commonProps} />;
+        let teacherTab = 'GENEL';
+        if (activeModule === ModuleType.TEACHER_AGENDA) teacherTab = 'AJANDA';
+        if (activeModule === ModuleType.TEACHER_CLASSES) teacherTab = 'ŞUBE';
+        if (activeModule === ModuleType.TEACHER_EXAMS) teacherTab = 'SINAV';
+        if (activeModule === ModuleType.TEACHER_SCHEDULE) teacherTab = 'PLAN';
+        if (activeModule === ModuleType.TEACHER_CONSTRAINTS) teacherTab = 'KISIT';
+        if (activeModule === ModuleType.TEACHER_PERFORMANCE) teacherTab = 'PERF';
+        if (activeModule === ModuleType.TEACHER_STUDENTS) teacherTab = 'ÖĞRENCİ';
+
+        return <TeachersModule teachers={teachers} setTeachers={setTeachers} classes={classes} setClasses={setClasses} schedule={finalSchedule} allClasses={classes} allLessons={lessons} schoolConfig={schoolConfig} onDeleteTeacherDB={(id) => deleteFromSupabase('teachers', id)} userRole={session?.role} currentUserId={session?.id} activeTab={teacherTab} {...commonProps} />;
       }
     }
 
@@ -542,15 +555,15 @@ const App: React.FC = () => {
       <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} editMode={session.role === UserRole.ADMIN ? editMode : false} setEditMode={setEditMode} userRole={session.role} dbError={dbError} />
       <main className="flex-1 flex flex-col overflow-hidden relative bg-grid-hatched">
         <header className="h-10 border-b border-[#354a5f]/40 bg-[#0d141b]/95 backdrop-blur-md z-[60] flex items-center justify-between px-4">
-          <div className="flex items-center gap-3">{session.role === UserRole.ADMIN && ( <button onClick={() => setEditMode(!editMode)} className={`px-3 h-6 text-[8px] font-black uppercase tracking-[0.2em] border ${editMode ? 'bg-[#3b82f6] text-white' : 'bg-[#fcd34d] text-black'}`}>{editMode ? 'EDİTÖR' : 'İZLEME'}</button> )}
+          <div className="flex items-center gap-3">{session.role === UserRole.ADMIN && (<button onClick={() => setEditMode(!editMode)} className={`px-3 h-6 text-[8px] font-black uppercase tracking-[0.2em] border ${editMode ? 'bg-[#3b82f6] text-white' : 'bg-[#fcd34d] text-black'}`}>{editMode ? 'EDİTÖR' : 'İZLEME'}</button>)}
             <h2 className="text-[9px] font-black tracking-[0.4em] uppercase text-white">{activeModule.replace('STUDENT_', '').replace('TEACHER_', '').replace('_', ' ')}</h2></div>
           <div className="flex items-center gap-4">
-             {isSyncing && <div className="flex items-center gap-2 mr-2"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div><span className="text-[6px] font-black text-green-500 uppercase tracking-widest">DNA_YAZILIYOR...</span></div>}
-             {isBackgroundLoading && <div className="flex items-center gap-2 mr-2"><i className="fa-solid fa-cloud-arrow-down text-[#3b82f6] text-[10px] animate-bounce"></i><span className="text-[6px] font-black text-[#3b82f6] uppercase tracking-widest">DETAYLAR_İNDİRİLİYOR...</span></div>}
-             <div className="text-right"><span className="text-[9px] font-black text-white uppercase block">{session.name}</span><span className="text-[6px] text-[#3b82f6] font-bold uppercase">{session.schoolId}</span></div>
-             <button onClick={async () => { await supabase.auth.signOut(); localStorage.clear(); setSession(null); }} className="text-red-500/50 hover:text-red-500 transition-colors"><i className="fa-solid fa-power-off"></i></button></div>
+            {isSyncing && <div className="flex items-center gap-2 mr-2"><div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></div><span className="text-[6px] font-black text-green-500 uppercase tracking-widest">DNA_YAZILIYOR...</span></div>}
+            {isBackgroundLoading && <div className="flex items-center gap-2 mr-2"><i className="fa-solid fa-cloud-arrow-down text-[#3b82f6] text-[10px] animate-bounce"></i><span className="text-[6px] font-black text-[#3b82f6] uppercase tracking-widest">DETAYLAR_İNDİRİLİYOR...</span></div>}
+            <div className="text-right"><span className="text-[9px] font-black text-white uppercase block">{session.name}</span><span className="text-[6px] text-[#3b82f6] font-bold uppercase">{session.schoolId}</span></div>
+            <button onClick={async () => { await supabase.auth.signOut(); localStorage.clear(); setSession(null); }} className="text-red-500/50 hover:text-red-500 transition-colors"><i className="fa-solid fa-power-off"></i></button></div>
         </header>
-        {successStamp && ( <div className="fixed inset-0 pointer-events-none z-[2000] flex items-center justify-center bg-black/10 backdrop-blur-[2px]"><div className="bg-[#3b82f6]/10 border-4 border-[#3b82f6] p-12 shadow-[0_0_100px_rgba(59,130,246,0.4)] animate-in zoom-in duration-300"><span className="text-4xl font-black text-white uppercase tracking-widest leading-none">{successStamp}</span></div></div> )}
+        {successStamp && (<div className="fixed inset-0 pointer-events-none z-[2000] flex items-center justify-center bg-black/10 backdrop-blur-[2px]"><div className="bg-[#3b82f6]/10 border-4 border-[#3b82f6] p-12 shadow-[0_0_100px_rgba(59,130,246,0.4)] animate-in zoom-in duration-300"><span className="text-4xl font-black text-white uppercase tracking-widest leading-none">{successStamp}</span></div></div>)}
         <div className="flex-1 overflow-auto custom-scrollbar p-2">{renderModule()}</div>
         <ChatPanel teachers={teachers} classes={classes} lessons={lessons} userRole={session.role} />
       </main>
