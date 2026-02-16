@@ -537,7 +537,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex justify-center bg-[#000000] min-h-screen">
-      <div className={`flex h-screen overflow-hidden w-full max-w-[1024px] shadow-2xl ${theme.mode === ThemeMode.DARK ? 'bg-[#080c10] text-[#e4e4e7]' : 'bg-[#f3f4f6] text-[#000000]}'}`} style={{ fontFamily: `'${theme.fontFamily}', monospace` }}>
+      <div className={`flex h-screen overflow-hidden w-full sm:max-w-full md:max-w-full lg:max-w-[1280px] shadow-2xl ${theme.mode === ThemeMode.DARK ? 'bg-[#080c10] text-[#e4e4e7]' : 'bg-[#f3f4f6] text-[#000000]}'}`} style={{ fontFamily: `'${theme.fontFamily}', monospace` }}>
         <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} editMode={session.role === UserRole.ADMIN ? editMode : false} setEditMode={setEditMode} userRole={session.role} dbError={dbError} />
         <main className="flex-1 flex flex-col overflow-hidden relative bg-grid-hatched">
           <header className="h-10 border-b border-[#354a5f]/40 bg-[#0d141b]/95 backdrop-blur-md z-[60] flex items-center justify-between px-4">

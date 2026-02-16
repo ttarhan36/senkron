@@ -278,14 +278,15 @@ const ClassSchedulesModule: React.FC<ClassSchedulesModuleProps> = ({
          )}
       </div>
 
-      <div className="flex-1 overflow-hidden bg-[#080c10] border border-white/5 relative bg-grid-hatched rounded-sm shadow-inner">
+      <div className="flex-1 overflow-auto bg-[#080c10] border border-white/5 relative bg-grid-hatched rounded-sm shadow-inner">
          {!viewingId || !currentSelectionObj ? (
             <div className="h-full flex flex-col items-center justify-center opacity-20">
                <i className="fa-solid fa-table-cells text-6xl mb-4 text-[#354a5f]"></i>
                <span className="text-[12px] font-black uppercase tracking-[0.5em]">GÖRÜNÜM_SEÇİNİZ</span>
             </div>
          ) : (
-            <table className="w-full h-full border-collapse table-fixed">
+            <div className="min-w-max">
+            <table className="w-full h-full border-collapse table-fixed min-w-[600px]">
                <thead>
                   <tr className="bg-[#1a242e]/98 sticky top-0 z-50 border-b border-[#354a5f]">
                      <th className="w-12 py-2 text-[8px] font-black text-slate-500 uppercase">H</th>
@@ -355,6 +356,7 @@ const ClassSchedulesModule: React.FC<ClassSchedulesModuleProps> = ({
                   ))}
                </tbody>
             </table>
+            </div>
          )}
       </div>
 
