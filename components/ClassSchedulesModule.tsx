@@ -108,11 +108,28 @@ const ClassSchedulesModule: React.FC<ClassSchedulesModuleProps> = ({
       } else {
          const teacherObj = extendedTeachers.find(t => t.id === viewingId || t.name === viewingId);
          if (!teacherObj) return undefined;
-         return schedule.find(s =>
-            s.ogretmen.toUpperCase() === teacherObj.name.toUpperCase() &&
-            standardizeDayCode(s.gun) === targetDay &&
-            Number(s.ders_saati) === targetHour
-         );
+
+         return schedule.find(s => {
+            // 1. Gün ve Saat Kontrolü (Hızlı eleme için önce)
+            if (standardizeDayCode(s.gun) !== targetDay) return false;
+            if (Number(s.ders_saati) !== targetHour) return false;
+
+            // 2. Öğretmen Kontrolü (ID veya Name veya Formatlı)
+            const schedTeacher = s.ogretmen.toUpperCase();
+            const teacherName = teacherObj.name.toUpperCase();
+            const teacherId = (teacherObj.id || '').toUpperCase();
+
+            // Tam Eşleşmeler
+            if (schedTeacher === teacherName) return true; // AHMET VARGÜN
+            if (schedTeacher === teacherId) return true; // T105
+
+            // Formatlı Eşleşmeler (Ö.ARAS)
+            const formattedSched = formatTeacherName(s.ogretmen);
+            const formattedTeacher = formatTeacherName(teacherObj.name);
+            if (formattedSched === formattedTeacher) return true;
+
+            return false;
+         });
       }
    };
 

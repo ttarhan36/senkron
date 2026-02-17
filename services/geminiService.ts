@@ -65,12 +65,14 @@ export const generateSchedule = async (data: any) => {
 
     SERT KISITLAR (ASLA İHLAL EDİLEMEZ - HARD CONSTRAINTS):
     
-    1. BLOK DERS KURALI (KRİTİK):
-       - Haftalık saati 2 olan dersler: KESİNLİKLE 2 saat BLOK (peş peşe) yapılmalıdır (Örn: 1. ve 2. saat). ASLA farklı günlere 1+1 bölünemez.
-       - Haftalık saati 3 olan dersler: 2+1 şeklinde bölünmelidir (2 saat blok, 1 saat tek).
-       - Haftalık saati 4 olan dersler: 2+2 şeklinde iki ayrı blok olarak yapılmalıdır.
-       - Haftalık saati 5 ve üzeri dersler: Mümkün olduğunca 2'li bloklar halinde dağıtılmalıdır.
-       - Blok dersler aynı gün içinde ardışık saatlere (n ve n+1) denk gelmelidir.
+    1. BLOK DERS KURALI (KRİTİK & KESİN):
+       - MAKSİMUM ARDIŞIK DERS: Bir ders aynı gün içinde arka arkaya EN FAZLA 2 SAAT olabilir.
+       - YASAK: Aynı dersi 3 saat peş peşe koymak (Örn: 1, 2, 3) KESİNLİKLE YASAKTIR.
+       - Haftalık saati 2 olan dersler: 2 saat BLOK.
+       - Haftalık saati 3 olan dersler: 2+1 şeklinde (Farklı zamanlarda).
+       - Haftalık saati 4 olan dersler: 2+2 şeklinde (İki ayrı blok).
+       - Haftalık saati 5 ve üzeri dersler: 2+2+1 veya 2+2+2 şeklinde dağıtılmalıdır.
+       - Blok dersler (2 saatlik) aynı gün içinde ardışık saatlere (n ve n+1) denk gelmelidir.
 
     2. ÖĞRETMEN ÇAKIŞMASI (SIFIR TOLERANS):
        - Bir öğretmen (Name/ID) aynı GÜN ve aynı SAATTE (ders_saati) birden fazla sınıfa ders veremez.
@@ -81,12 +83,16 @@ export const generateSchedule = async (data: any) => {
        - Bir sınıfın toplam atanmış saati 33 ise, o sınıf için en fazla 33 schedule entry üretilmelidir. 34 veya 35 OLAMAZ.
        - ASLA assignments'ta olmayan ders veya öğretmen ekleme. Sadece verilen 'assignments' listesindeki ders-öğretmen ikililerini kullan.
 
-    4. FORMAT VE KODLAR:
+    4. FORMAT VE KODLAR (HAYATİ ÖNEM TAŞIR):
        - Günler: "PZT", "SAL", "ÇAR", "PER", "CUM".
        - Ders Saatleri: Sabahçı/Tam gün için genelde 1-8 arası.
+       - 'ders' ALANI: KESİNLİKLE 'assignments' listesindeki 'lessonId' değerini kullan (Örn: "L-MATE"). Eğer ID yoksa 'lessons' listesindeki 'name' alanını BİREBİR kullan. ASLA kısaltma yapma veya değiştirme.
+       - 'ogretmen' ALANI: KESİNLİKLE 'assignments' listesindeki 'teacherId' değerini kullan (Örn: "T105"). Eğer ID yoksa 'teachers' listesindeki 'name' alanını BİREBİR kullan.
+       -RENK TUTARLILIĞI İÇİN BU KODLAR ŞARTTIR.
 
     ALGORİTMA ADIMLARI (CHAIN OF THOUGHT):
     Adım 1: Önce tüm sınıfların BLOK derslerini (2, 4, 5 saatlikler) öğretmen çakışması olmayacak şekilde şablona yerleştir.
+    KRİTİK KURAL: Bir dersi bir güne koyarken sayacı kontrol et. Eğer o gün o dersten 2 saat koyduysan, 3. saati O GÜNE KOYMA. Başka güne geç.
     Adım 2: Kalan TEK saatlik dersleri (1 saatlik veya 3'ten artan 1'ler) kalan boşluklara, öğretmenlerin boş saatlerine göre yerleştir.
     Adım 3: Sonuç listesindeki toplam eleman sayısını say. Eğer ${totalAssignedHours} değerinden azsa, eksik dersleri bul ve boş yerlere (Gerekirse kural esneterek ama çakışma yaratmadan) ekle.
 

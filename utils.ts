@@ -53,31 +53,51 @@ export const parseGradeFromName = (name: string): number => {
  * Branş varyasyonlarını ORTAK 4 KARAKTERLİ STANDARDA çevirir.
  */
 export const standardizeBranchCode = (input: string): string => {
-  const s = standardizeForMatch(input || "");
+  let s = standardizeForMatch(input || "").replace(/^[LS][-_\.]/, '');
 
   const aliases: Record<string, string> = {
-    'MAT': 'MATE', 'MATEMATIK': 'MATE',
-    'GEO': 'GEOM', 'GEOMETRI': 'GEOM',
-    'KIM': 'KIMY', 'KIMYA': 'KIMY',
-    'FIZ': 'FIZI', 'FIZIK': 'FIZI',
-    'BIY': 'BIYO', 'BIYOLOJI': 'BIYO',
-    'TDE': 'TDEB', 'TURKCE': 'TDEB', 'EDEBIYAT': 'TDEB', 'TUR': 'TDEB',
-    'ING': 'INGI', 'INGILIZCE': 'INGI',
-    'ALM': 'ALMA', 'ALMANCA': 'ALMA',
-    'COG': 'COGR', 'COGRAFYA': 'COGR',
-    'TAR': 'TARI', 'TARIH': 'TARI',
-    'FEL': 'FELS', 'FELSEFE': 'FELS',
-    'DIN': 'DKAB', 'DKAB': 'DKAB',
-    'BED': 'BEDE', 'BEDEN': 'BEDE',
-    'MUZ': 'MUZI', 'MUZIK': 'MUZI',
-    'GOR': 'GORS', 'GORSEL': 'GORS',
-    'REH': 'REHB', 'REHBERLIK': 'REHB'
+    // Temel Dersler
+    'MAT': 'MATE', 'MATE': 'MATE', 'MATEM': 'MATE', 'MATEMATIK': 'MATE',
+    'TUR': 'TURK', 'TURK': 'TURK', 'TURKCE': 'TURK', 'TDE': 'TURK', 'TDEB': 'TURK', 'EDEBIYAT': 'TURK',
+    'FEN': 'FENB', 'FENB': 'FENB', 'FENBILIMLERI': 'FENB', 'FENBILGISI': 'FENB',
+    'ING': 'INGI', 'INGI': 'INGI', 'INGILIZCE': 'INGI',
+    'SOS': 'SOSY', 'SOB': 'SOSY', 'SOSY': 'SOSY', 'SOSYAL': 'SOSY', 'SOSYALBILGILER': 'SOSY',
+    // Sayısal Dersler
+    'GEO': 'GEOM', 'GEOM': 'GEOM', 'GEOMETRI': 'GEOM',
+    'FIZ': 'FIZI', 'FIZI': 'FIZI', 'FIZIK': 'FIZI',
+    'KIM': 'KIMY', 'KIMY': 'KIMY', 'KIMYA': 'KIMY',
+    'BIY': 'BIYO', 'BIYO': 'BIYO', 'BIYOLOJI': 'BIYO',
+    // Sözel Dersler
+    'COG': 'COGR', 'COGR': 'COGR', 'COGRAFYA': 'COGR',
+    'TAR': 'TARI', 'TARI': 'TARI', 'TARIH': 'TARI',
+    'FEL': 'FELS', 'FELS': 'FELS', 'FELSEFE': 'FELS',
+    'DIN': 'DKAB', 'DKAB': 'DKAB', 'DINKULTURUVEA': 'DKAB',
+    // Beceri Dersleri
+    'BED': 'BEDE', 'BEDE': 'BEDE', 'BEDEN': 'BEDE', 'BEDENEGITIMI': 'BEDE',
+    'MUZ': 'MUZI', 'MUZI': 'MUZI', 'MUZIK': 'MUZI',
+    'GOR': 'GORS', 'GORS': 'GORS', 'GORSEL': 'GORS', 'GORSELSANATLAR': 'GORS', 'RESIM': 'GORS',
+    'REH': 'REHB', 'REHB': 'REHB', 'REHBERLIK': 'REHB', 'RY': 'REHB',
+    'ALM': 'ALMA', 'ALMA': 'ALMA', 'ALMANCA': 'ALMA',
+    // Seçmeli ve Ekstra Dersler
+    'BIL': 'BILI', 'BILI': 'BILI', 'BILISIM': 'BILI', 'BILGISAYAR': 'BILI', 'BILTEKNOLOJILERI': 'BILI',
+    'SAV': 'SAVE', 'SAVE': 'SAVE', 'SAGLIKBILGISI': 'SAVE', 'SAGLIK': 'SAVE',
+    'SOK': 'SOKM', 'SOKM': 'SOKM', 'SECMELIOKUMA': 'SOKM',
+    'SEÇ': 'SECM', 'SECM': 'SECM', 'SECMELI': 'SECM', 'SZEK': 'SECM',
+    'TEK': 'TEKN', 'TEKN': 'TEKN', 'TEKNOLOJI': 'TEKN', 'TEKNOLOJIVETASARIM': 'TEKN',
+    'TRA': 'TRAF', 'TRAF': 'TRAF', 'TRAFIK': 'TRAF',
+    'HAB': 'HBVS', 'HBVS': 'HBVS'
   };
 
   if (aliases[s]) return aliases[s];
   if (s.includes('MATEMATIK')) return 'MATE';
-  if (s.includes('EDEBIYAT') || s.includes('TURKCE')) return 'TDEB';
+  if (s.includes('EDEBIYAT') || s.includes('TURKCE')) return 'TURK';
   if (s.includes('FIZIK')) return 'FIZI';
+  if (s.includes('FENBI')) return 'FENB';
+  if (s.includes('SOSYAL')) return 'SOSY';
+  if (s.includes('BILISIM') || s.includes('BILGISAYAR')) return 'BILI';
+  if (s.includes('REHBER')) return 'REHB';
+  if (s.includes('SAGLIK')) return 'SAVE';
+  if (s.includes('SECMELI')) return 'SECM';
 
   return s.substring(0, 4);
 };
@@ -199,28 +219,45 @@ export const getGradeFromLesson = (lessonName: string, branchCode: string) => {
 
 export const getBranchColor = (input: string) => {
   const s = standardizeBranchCode(input);
-  if (s.includes('MATE')) return '#a855f7';
-  if (s.includes('FIZI')) return '#3b82f6';
-  if (s.includes('KIMY')) return '#f59e0b';
-  if (s.includes('BIYO')) return '#10b981';
-  if (s.includes('TDEB')) return '#ef4444';
-  if (s.includes('GEOM')) return '#6366f1';
-  if (s.includes('MUZI')) return '#ec4899';
-  if (s.includes('INGI')) return '#f43f5e';
-  if (s.includes('BEDE')) return '#0ea5e9';
-  if (s.includes('TARI')) return '#eab308';
-  if (s.includes('COGR')) return '#8b5cf6';
-  if (s.includes('FELS')) return '#14b8a6';
-  if (s.includes('DKAB')) return '#d946ef';
-  if (s.includes('ALMA')) return '#fb923c';
-  if (s.includes('GORS')) return '#22c55e';
 
+  // Her ders için SABİT ve BENZERSİZ renk
+  const colorMap: Record<string, string> = {
+    'MATE': '#a855f7',  // Mor (Matematik)
+    'TURK': '#ef4444',  // Kırmızı (Türkçe / Edebiyat)
+    'FENB': '#10b981',  // Yeşil (Fen Bilimleri)
+    'INGI': '#f43f5e',  // Gül (İngilizce)
+    'SOSY': '#f97316',  // Turuncu (Sosyal Bilgiler)
+    'FIZI': '#3b82f6',  // Mavi (Fizik)
+    'KIMY': '#f59e0b',  // Amber (Kimya)
+    'BIYO': '#059669',  // Koyu Yeşil (Biyoloji)
+    'GEOM': '#6366f1',  // İndigo (Geometri)
+    'MUZI': '#ec4899',  // Pembe (Müzik)
+    'BEDE': '#0ea5e9',  // Gökyüzü Mavisi (Beden)
+    'TARI': '#eab308',  // Sarı (Tarih)
+    'COGR': '#8b5cf6',  // Menekşe (Coğrafya)
+    'FELS': '#14b8a6',  // Deniz Yeşili (Felsefe)
+    'DKAB': '#d946ef',  // Fuşya (Din Kültürü)
+    'ALMA': '#fb923c',  // Açık Turuncu (Almanca)
+    'GORS': '#22c55e',  // Çimen Yeşili (Görsel Sanatlar)
+    'REHB': '#84cc16',  // Lime (Rehberlik)
+    'BILI': '#06b6d4',  // Cyan (Bilişim)
+    'SAVE': '#a3e635',  // Açık Lime (Sağlık)
+    'SOKM': '#fb7185',  // Açık Gül (Seçmeli Okuma)
+    'SECM': '#c084fc',  // Açık Mor (Seçmeli)
+    'TEKN': '#38bdf8',  // Açık Mavi (Teknoloji)
+    'TRAF': '#fbbf24',  // Altın (Trafik)
+    'HBVS': '#34d399',  // Açık Yeşil (HBV)
+  };
+
+  if (colorMap[s]) return colorMap[s];
+
+  // Hash fallback (bilinmeyen dersler için daha ayrık renkler)
   let hash = 0;
   for (let i = 0; i < s.length; i++) {
-    hash = (hash * 31) + s.charCodeAt(i);
+    hash = ((hash << 5) - hash + s.charCodeAt(i)) | 0;
   }
-  const h = Math.abs(hash * 0.618033988749895) % 1;
-  return `hsl(${Math.floor(h * 360)}, 80%, 65%)`;
+  const hue = ((Math.abs(hash) * 137.508) % 360);
+  return `hsl(${Math.floor(hue)}, 75%, 60%)`;
 };
 
 export const hexToRgba = (color: string, opacity: number) => {
