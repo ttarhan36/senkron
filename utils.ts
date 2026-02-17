@@ -12,7 +12,7 @@ export const standardizeForMatch = (text: string): string => {
     'Ş': 'S', 'ş': 's', 'Ö': 'O', 'ö': 'o',
     'Ç': 'C', 'ç': 'c'
   };
-  
+
   let result = text.replace(/[İIıiĞğÜüŞşÖöÇç]/g, (letter) => map[letter] || letter);
   return result.toUpperCase().trim();
 };
@@ -30,12 +30,12 @@ export const standardizeDayCode = (day: string): string => {
   if (d.startsWith("PERSEMB")) return "PER";
   if (d.startsWith("CUMA")) return "CUM";
   if (d.length >= 3) {
-      const short = d.substring(0, 3);
-      if (short === "PZT") return "PZT";
-      if (short === "SAL") return "SAL";
-      if (short === "CAR" || short === "ÇAR") return "ÇAR";
-      if (short === "PER") return "PER";
-      if (short === "CUM") return "CUM";
+    const short = d.substring(0, 3);
+    if (short === "PZT") return "PZT";
+    if (short === "SAL") return "SAL";
+    if (short === "CAR" || short === "ÇAR") return "ÇAR";
+    if (short === "PER") return "PER";
+    if (short === "CUM") return "CUM";
   }
   return d;
 };
@@ -54,7 +54,7 @@ export const parseGradeFromName = (name: string): number => {
  */
 export const standardizeBranchCode = (input: string): string => {
   const s = standardizeForMatch(input || "");
-  
+
   const aliases: Record<string, string> = {
     'MAT': 'MATE', 'MATEMATIK': 'MATE',
     'GEO': 'GEOM', 'GEOMETRI': 'GEOM',
@@ -78,15 +78,50 @@ export const standardizeBranchCode = (input: string): string => {
   if (s.includes('MATEMATIK')) return 'MATE';
   if (s.includes('EDEBIYAT') || s.includes('TURKCE')) return 'TDEB';
   if (s.includes('FIZIK')) return 'FIZI';
-  
+
   return s.substring(0, 4);
 };
 
 export const getSectionColor = (className: string) => {
   const name = className.trim().toUpperCase();
+
+  // Sınıf seviyesine göre sabit ana renk tonu (hue)
+  const gradeHues: Record<number, number> = {
+    1: 0,     // Kırmızı
+    2: 30,    // Turuncu
+    3: 55,    // Sarı
+    4: 90,    // Lime
+    5: 140,   // Yeşil
+    6: 175,   // Cyan
+    7: 210,   // Mavi
+    8: 260,   // Mor
+    9: 290,   // Magenta
+    10: 320,  // Pembe
+    11: 35,   // Koyu Turuncu
+    12: 195,  // Koyu Cyan
+  };
+
+  // Sınıf seviyesini ayıkla
+  const gradeMatch = name.match(/^(\d+)/);
+  const grade = gradeMatch ? parseInt(gradeMatch[1]) : 0;
+
+  // Şube harfini ayıkla (A, B, C, D...)
+  const sectionMatch = name.match(/[A-Z]$/);
+  const sectionChar = sectionMatch ? sectionMatch[0] : 'A';
+  const sectionIndex = sectionChar.charCodeAt(0) - 65; // A=0, B=1, C=2...
+
+  if (grade > 0 && gradeHues[grade] !== undefined) {
+    // Ana renk tonu + şube harfine göre küçük kaydırma
+    const hue = (gradeHues[grade] + sectionIndex * 12) % 360;
+    const saturation = 70 + (sectionIndex % 3) * 8; // 70-86 arası
+    const lightness = 52 + (sectionIndex % 4) * 5;  // 52-67 arası
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  }
+
+  // Bilinmeyen format için fallback: gelişmiş hash
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
-    hash = (hash * 31) + name.charCodeAt(i);
+    hash = ((hash << 7) - hash + name.charCodeAt(i)) | 0;
   }
   const hue = Math.abs(hash) % 360;
   return `hsl(${hue}, 70%, 55%)`;
@@ -100,14 +135,14 @@ export const guessGenderFromName = (name: string): Gender => {
   const n = standardizeForMatch(name);
   const nameParts = n.split(/\s+/).filter(p => p.length >= 2);
   if (nameParts.length === 0) return Gender.MALE;
-  
+
   const first = nameParts[0];
 
   // 1. KESİN KADIN İSİMLERİ LİSTESİ (Sonek kuralına uymayanlar dahil)
   const femaleKeywords = [
     // Belirttiğiniz isimler
-    'PINAR', 'FILIZ', 'SEVIL', 'SEVILAY', 'GONUL', 'ISIL', 'IDIL', 'IPEK', 'CIGDEM', 
-    'AYSE', 'FATMA', 'ZEYNEP', 'ELIF', 'MERYEM', 'EMINE', 'HATICE', 'SULTAN', 'OZLEM', 
+    'PINAR', 'FILIZ', 'SEVIL', 'SEVILAY', 'GONUL', 'ISIL', 'IDIL', 'IPEK', 'CIGDEM',
+    'AYSE', 'FATMA', 'ZEYNEP', 'ELIF', 'MERYEM', 'EMINE', 'HATICE', 'SULTAN', 'OZLEM',
     'ESRA', 'GAMZE', 'MERVE', 'BUSRA', 'KUBRA', 'EDA', 'SEDA', 'HULYA', 'CANAN', 'SENA',
     'GIZEM', 'DAMLA', 'EBRU', 'YAREN', 'BURCU', 'SELIN', 'GOZDE', 'OZGE', 'DUYGU', 'NILAY',
     'BERNA', 'HANDAN', 'SEVDA', 'DILARA', 'BUKET', 'CEREN', 'ASYA', 'EYLUL', 'NESRIN',
@@ -120,7 +155,7 @@ export const guessGenderFromName = (name: string): Gender => {
     'SABRIYE', 'REYYAN', 'TAYYIBE', 'MUKADDES', 'MUSERREF', 'MELIKE', 'MUGE', 'YILDIZ',
     'TULAY', 'SULE', 'DEMET', 'DIDEM', 'AHSEN', 'AZRA', 'AYLIN', 'AYSEL', 'AHRU'
   ];
-  
+
   if (femaleKeywords.some(f => first === f)) return Gender.FEMALE;
 
   // 2. GELİŞMİŞ SON EK (SUFFIX) ANALİZİ
@@ -131,15 +166,15 @@ export const guessGenderFromName = (name: string): Gender => {
 
   // İstisna: Bazı erkek isimleri 'AN' ile bitebilir (HAKAN, KAAN vb.), 
   // bu yüzden 'AN' kontrolünü sadece bilinen kadın isimleri havuzunda yapıyoruz.
-  
-  if (first.endsWith('NUR') || first.endsWith('GUL') || first.endsWith('SU') || 
-      first.endsWith('NAZ') || first.endsWith('NISA') || first.endsWith('SARE')) {
+
+  if (first.endsWith('NUR') || first.endsWith('GUL') || first.endsWith('SU') ||
+    first.endsWith('NAZ') || first.endsWith('NISA') || first.endsWith('SARE')) {
     return Gender.FEMALE;
   }
 
   // Özel Karakteristik Bitişler (Örn: 'IZ' -> Filiz, Yeliz, Deniz uniseks ama öğretmenlikte genelde K)
   if (first.endsWith('IZ') && !['AZIZ', 'EDIZ'].includes(first)) return Gender.FEMALE;
-  
+
   // 'IL' Bitişi (Sevil, Işıl, Idil, Serpil vb.) - İstisnalar: Halil, Celal, İsmail
   const maleIL = ['HALIL', 'ISMAIL', 'CELAL', 'BILAL', 'ADIL'];
   if (first.endsWith('IL') && !maleIL.includes(first)) return Gender.FEMALE;
@@ -164,22 +199,22 @@ export const getGradeFromLesson = (lessonName: string, branchCode: string) => {
 
 export const getBranchColor = (input: string) => {
   const s = standardizeBranchCode(input);
-  if (s.includes('MATE')) return '#a855f7'; 
-  if (s.includes('FIZI')) return '#3b82f6'; 
-  if (s.includes('KIMY')) return '#f59e0b'; 
-  if (s.includes('BIYO')) return '#10b981'; 
-  if (s.includes('TDEB')) return '#ef4444'; 
-  if (s.includes('GEOM')) return '#6366f1'; 
-  if (s.includes('MUZI')) return '#ec4899'; 
-  if (s.includes('INGI')) return '#f43f5e'; 
-  if (s.includes('BEDE')) return '#0ea5e9'; 
-  if (s.includes('TARI')) return '#eab308'; 
-  if (s.includes('COGR')) return '#8b5cf6'; 
-  if (s.includes('FELS')) return '#14b8a6'; 
-  if (s.includes('DKAB')) return '#d946ef'; 
-  if (s.includes('ALMA')) return '#fb923c'; 
-  if (s.includes('GORS')) return '#22c55e'; 
-  
+  if (s.includes('MATE')) return '#a855f7';
+  if (s.includes('FIZI')) return '#3b82f6';
+  if (s.includes('KIMY')) return '#f59e0b';
+  if (s.includes('BIYO')) return '#10b981';
+  if (s.includes('TDEB')) return '#ef4444';
+  if (s.includes('GEOM')) return '#6366f1';
+  if (s.includes('MUZI')) return '#ec4899';
+  if (s.includes('INGI')) return '#f43f5e';
+  if (s.includes('BEDE')) return '#0ea5e9';
+  if (s.includes('TARI')) return '#eab308';
+  if (s.includes('COGR')) return '#8b5cf6';
+  if (s.includes('FELS')) return '#14b8a6';
+  if (s.includes('DKAB')) return '#d946ef';
+  if (s.includes('ALMA')) return '#fb923c';
+  if (s.includes('GORS')) return '#22c55e';
+
   let hash = 0;
   for (let i = 0; i < s.length; i++) {
     hash = (hash * 31) + s.charCodeAt(i);
