@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { ScheduleEntry, ClassSection, SchoolConfig, ShiftType, Lesson, Teacher, UserRole } from '../types';
-import { getSectionColor, getBranchColor, standardizeForMatch, standardizeDayCode } from '../utils';
+import { getSectionColor, getBranchColor, standardizeForMatch, standardizeDayCode, standardizeBranchCode } from '../utils';
 
 interface ClassSchedulesModuleProps {
    schedule: ScheduleEntry[];
@@ -140,9 +140,14 @@ const ClassSchedulesModule: React.FC<ClassSchedulesModuleProps> = ({
 
    const formatTeacherName = (name: string) => {
       if (!name || name === 'BELİRSİZ' || name.trim() === '') return 'ATANMADI';
-      const parts = name.trim().split(/\s+/);
+
+      // Eğer ID ise (T103 gibi) gerçek ismi bul
+      const teacherObj = teachers.find(t => t.id === name || t.name === name);
+      const realName = teacherObj ? teacherObj.name : name;
+
+      const parts = realName.trim().split(/\s+/);
       if (parts.length > 1) {
-         return `${parts[0][0]}. ${parts[parts.length - 1]}`.toUpperCase();
+         return `${parts[0][0]}.${parts[parts.length - 1]}`.toUpperCase();
       }
       return parts[0].toUpperCase();
    };
@@ -298,7 +303,10 @@ const ClassSchedulesModule: React.FC<ClassSchedulesModuleProps> = ({
                            <td className="bg-black/40 border-r border-white/5 text-center text-[11px] font-black text-slate-600 shadow-inner">{h}</td>
                            {DAYS_SHORT.map(day => {
                               const entry = getEntry(day, h);
-                              const lessonObj = entry ? lessons.find(l => l.name === entry.ders) : null;
+                              // Ders objesini ID, Name veya Branch ile bulmaya çalış
+                              const lessonObj = entry ? lessons.find(l => l.id === entry.ders || l.name === entry.ders || l.branch === entry.ders) : null;
+
+                              // Renk belirleme: lessonObj varsa onun branch'i, yoksa entry.ders'i kullan
                               const bColor = entry ? getBranchColor(lessonObj?.branch || lessonObj?.name || entry.ders) : 'transparent';
                               const conflict = entry ? checkConflict(entry.ogretmen, day, h, viewType === 'CLASS' ? viewingId : entry.sinif) : null;
                               const isBlockageInSlot = entry ? checkTeacherBlockage(entry.ogretmen, day, h) : false;
@@ -323,10 +331,14 @@ const ClassSchedulesModule: React.FC<ClassSchedulesModuleProps> = ({
                                           style={{ borderLeftColor: (conflict || isBlockageInSlot) ? '#ef4444' : (viewType === 'TEACHER' ? getSectionColor(entry.sinif) : bColor) }}
                                        >
                                           <span className="text-[10px] font-black text-white leading-none uppercase truncate w-full text-center px-1">
-                                             {viewType === 'CLASS' ? entry.ders.substring(0, 5) : entry.sinif}
+                                             {viewType === 'CLASS'
+                                                ? (lessonObj ? standardizeBranchCode(lessonObj.branch) : entry.ders.substring(0, 5))
+                                                : entry.sinif}
                                           </span>
-                                          <span className="text-[6px] font-black text-slate-500 uppercase mt-1 truncate w-full text-center px-1">
-                                             {viewType === 'CLASS' ? formatTeacherName(entry.ogretmen) : entry.ders.substring(0, 6)}
+                                          <span className="text-[7px] font-black text-slate-500 uppercase mt-1 truncate w-full text-center px-1">
+                                             {viewType === 'CLASS'
+                                                ? formatTeacherName(entry.ogretmen)
+                                                : (lessonObj ? standardizeBranchCode(lessonObj.branch) : entry.ders.substring(0, 6))}
                                           </span>
 
                                           {(conflict || isBlockageInSlot) && (

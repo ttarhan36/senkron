@@ -1,7 +1,7 @@
 
 import { GoogleGenAI, Type, GenerateContentResponse, Modality } from "@google/genai";
 
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = () => new GoogleGenAI({ apiKey: (import.meta as any).env.VITE_API_KEY || '' });
 
 let globalAudioContext: AudioContext | null = null;
 export const getAudioContext = async () => {
@@ -18,11 +18,11 @@ export const chatWithGemini = async (message: string, content?: any) => {
   try {
     const ai = getAI();
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', 
+      model: 'gemini-3-flash-preview',
       contents: message,
-      config: { 
-        systemInstruction: "Sen bir okul yönetimi uzmanısın. Her zaman Türkçe yanıt ver.", 
-        thinkingConfig: { thinkingBudget: 0 } 
+      config: {
+        systemInstruction: "Sen bir okul yönetimi uzmanısın. Her zaman Türkçe yanıt ver.",
+        thinkingConfig: { thinkingBudget: 0 }
       }
     });
     return response.text || "Yanıt üretilemedi.";
@@ -35,13 +35,19 @@ export const generateSchedule = async (data: any) => {
   try {
     const ai = getAI();
     const activeClasses = data.classes.filter((c: any) => c.assignments && c.assignments.length > 0);
-    
+
     if (activeClasses.length === 0) {
       throw new Error("HATA: Hiçbir şubeye ders atanmamış.");
     }
 
     // Toplam ders yükünü hesapla (Doğrulama için)
-    const totalAssignedHours = activeClasses.reduce((acc:any, c:any) => acc + (c.assignments?.reduce((s:any, a:any) => s + a.hours, 0) || 0), 0);
+    const totalAssignedHours = activeClasses.reduce((acc: any, c: any) => acc + (c.assignments?.reduce((s: any, a: any) => s + a.hours, 0) || 0), 0);
+
+    // Sınıf bazlı saat dağılımı (AI'ya bildirilecek)
+    const classHourBreakdown = activeClasses.map((c: any) => {
+      const totalHours = c.assignments?.reduce((s: any, a: any) => s + a.hours, 0) || 0;
+      return `${c.name}: ${totalHours} saat`;
+    }).join(', ');
 
     const prompt = `ROL: Sen Google OR-Tools mantığıyla çalışan, matematiksel kesinliğe sahip bir 'Ders Programı Dağıtım Motoru'sun.
 
@@ -53,6 +59,9 @@ export const generateSchedule = async (data: any) => {
     HEDEF:
     Verilen 'assignments' listesindeki TÜM dersleri eksiksiz yerleştir.
     BEKLENEN TOPLAM SLOT SAYISI: ${totalAssignedHours} (Bu sayıya tam olarak ulaşmalısın).
+
+    SINIF BAZLI SAAT LİMİTLERİ (KRİTİK): ${classHourBreakdown}
+    Her sınıf için SADECE yukarıdaki saat kadar ders slotu oluştur. Fazla slot OLUŞTURMA. Boş kalan saatler BOŞ kalmalıdır.
 
     SERT KISITLAR (ASLA İHLAL EDİLEMEZ - HARD CONSTRAINTS):
     
@@ -69,6 +78,8 @@ export const generateSchedule = async (data: any) => {
 
     3. MİKTAR DOĞRULAMASI:
        - Bir ders için 'hours: 2' denmişse, çıktı listesinde o ders ve öğretmen için tam olarak 2 kayıt olmalıdır. 1 veya 3 olamaz.
+       - Bir sınıfın toplam atanmış saati 33 ise, o sınıf için en fazla 33 schedule entry üretilmelidir. 34 veya 35 OLAMAZ.
+       - ASLA assignments'ta olmayan ders veya öğretmen ekleme. Sadece verilen 'assignments' listesindeki ders-öğretmen ikililerini kullan.
 
     4. FORMAT VE KODLAR:
        - Günler: "PZT", "SAL", "ÇAR", "PER", "CUM".
@@ -82,7 +93,7 @@ export const generateSchedule = async (data: any) => {
     ÇIKTI: Sadece 'schedule' dizisi içeren geçerli bir JSON dön. Yorum yazma.`;
 
     const response: GenerateContentResponse = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', 
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -122,7 +133,7 @@ export const analyzeAttendanceImage = async (img: string, numbers: string[], tar
     const ai = getAI();
     const base64Data = img.split(',')[1];
     const mimeType = img.split(',')[0].split(':')[1].split(';')[0];
-    
+
     const prompt = `GÖREV: El yazısı yoklama kağıdından öğrenci numaralarını ayıkla.
     Görselde dikey sütunlar ders saatlerini (1. DERS, 2. DERS, vb.) temsil eder.
     
@@ -143,15 +154,15 @@ export const analyzeAttendanceImage = async (img: string, numbers: string[], tar
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [ 
-        { inlineData: { data: base64Data, mimeType: mimeType } }, 
-        { text: prompt } 
+      contents: [
+        { inlineData: { data: base64Data, mimeType: mimeType } },
+        { text: prompt }
       ],
-      config: { 
+      config: {
         responseMimeType: "application/json"
       }
     });
-    
+
     const text = response.text || "{\"results\": []}";
     return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim());
   } catch (error) {
@@ -195,11 +206,11 @@ export const analyzeGradeImage = async (img: string, studentNumbers: string[], k
 
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [ 
-        { inlineData: { data: base64Data, mimeType: mimeType } }, 
-        { text: prompt } 
+      contents: [
+        { inlineData: { data: base64Data, mimeType: mimeType } },
+        { text: prompt }
       ],
-      config: { 
+      config: {
         responseMimeType: "application/json"
       }
     });
