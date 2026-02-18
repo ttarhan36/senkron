@@ -629,6 +629,96 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    const teacherStats = useMemo(() => ({ male: teachers.filter(t => t.gender === Gender.MALE).length, female: teachers.filter(t => t.gender === Gender.FEMALE).length }), [teachers]);
    const groupedTeachers = useMemo(() => { const groups: Record<string, Teacher[]> = {}; filtered.forEach(t => { if (!t) return; const branch = (t.branchShorts && t.branchShorts.length > 0) ? t.branchShorts[0] : (t.branchShort || 'DİĞER'); const normalizedBranch = standardizeBranchCode(branch); if (!groups[normalizedBranch]) groups[normalizedBranch] = []; groups[normalizedBranch].push(t); }); return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)); }, [filtered]);
    const handleToggleBlockedSlot = (day: string, hour: number) => { if (!editMode || !teacher) return onWatchModeAttempt?.(); const slot = `${standardizeDayCode(day)}-${hour}`; const currentBlocked = teacher.blockedSlots || []; const isBlocked = currentBlocked.includes(slot); setTeachers(teachers.map(t => t.id === teacher.id ? { ...t, blockedSlots: isBlocked ? currentBlocked.filter(s => s !== slot) : [...currentBlocked, slot] } : t)); onSuccess(isBlocked ? "SLOT_ERİŞİME_AÇILDI" : "SLOT_KAPATILDI"); };
+
+   const printOpticalForm = () => {
+      if (!gradeTerminalTarget) return;
+      const w = window.open('', '_blank');
+      if (!w) { alert("Lütfen açılır pencere engelleyicisini kapatın."); return; }
+
+      const qCount = questionCount;
+      let colCount = 2; // Default for 20
+      if (qCount <= 10) colCount = 1;
+      else if (qCount <= 25) colCount = 2;
+      else if (qCount <= 60) colCount = 3;
+      else colCount = 4;
+
+      const qPerCol = Math.ceil(qCount / colCount);
+
+      const htmlContent = `
+         <!DOCTYPE html>
+         <html lang="tr">
+         <head>
+            <meta charset="UTF-8">
+            <title>${gradeTerminalTarget.lessonName} - Optik Form</title>
+            <style>
+               @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap');
+               @page { size: A4 landscape; margin: 0; }
+               body { margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: white; display: flex; width: 297mm; height: 210mm; }
+               .page-a5 { width: 148.5mm; height: 210mm; position: relative; box-sizing: border-box; padding: 10mm; border-right: 1px dashed #ccc; display: flex; flex-direction: column; }
+               .page-a5:last-child { border-right: none; }
+               .marker { position: absolute; width: 5mm; height: 5mm; background: black; }
+               .tl { top: 7mm; left: 7mm; } .tr { top: 7mm; right: 7mm; } .bl { bottom: 7mm; left: 7mm; } .br { bottom: 7mm; right: 7mm; }
+               .header { text-align: center; margin-bottom: 3mm; border-bottom: 2px solid #000; padding-bottom: 2mm; margin-top: 5mm; }
+               .school-name { font-size: 10pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+               .exam-name { font-size: 11pt; font-weight: 800; margin-top: 2mm; text-transform: uppercase; }
+               .exam-meta { font-size: 7pt; font-weight: bold; color: #555; margin-top: 1mm; text-transform: uppercase; }
+               .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; font-size: 8pt; margin-bottom: 4mm; font-weight: bold; }
+               .field { border: 1px solid #000; padding: 2mm; display: flex; flex-direction: column; gap: 1mm; height: 10mm; justify-content: center; }
+               .label { font-size: 6pt; text-transform: uppercase; color: #666; font-weight: bold; letter-spacing: 0.5px; }
+               .questions-container { flex: 1; display: flex; gap: 3mm; align-items: flex-start; justify-content: center; padding-top: 2mm; }
+               .col { flex: 1; display: flex; flex-direction: column; gap: 1.25mm; }
+               .q-row { display: flex; align-items: center; justify-content: flex-end; }
+               .q-no { min-width: 5mm; text-align: right; margin-right: 1.5mm; font-weight: bold; font-size: 8pt; font-family: 'Roboto Mono', monospace; }
+               .options { display: flex; gap: 1.2mm; }
+               .opt { width: 4mm; height: 4mm; border: 1px solid #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 5pt; font-weight: bold; color: #333; }
+               .footer { margin-top: auto; text-align: center; font-size: 6pt; color: #999; border-top: 1px solid #ddd; padding-top: 2mm; }
+               .footer-code { font-family: 'Roboto Mono', monospace; letter-spacing: 2px; }
+               @media print { body { -webkit-print-color-adjust: exact; } .page-a5 { border-right: none; } }
+            </style>
+         </head>
+         <body>
+            ${renderPage(gradeTerminalTarget.className, activeExamSlot)}
+            ${renderPage(gradeTerminalTarget.className, activeExamSlot)}
+         </body>
+         </html>
+      `;
+
+      function renderPage(clsName: string, slot: any) {
+         return `
+            <div class="page-a5">
+               <div class="marker tl"></div><div class="marker tr"></div><div class="marker bl"></div><div class="marker br"></div>
+               <div class="header">
+                  <div class="school-name">CEVAP FORMU</div>
+                  <div class="exam-name">${gradeTerminalTarget?.lessonName}</div>
+                  <div class="exam-meta">${clsName} | ${slot === 5 ? 'SÖZLÜ' : slot + '. YAZILI'} | ${new Date().toLocaleDateString('tr-TR')}</div>
+               </div>
+               <div class="info-grid">
+                  <div class="field"><span class="label">AD SOYAD</span></div> <div class="field"><span class="label">NUMARA</span></div>
+                  <div class="field"><span class="label">SINIF</span><span style="font-size:9pt">${clsName}</span></div>
+                  <div class="field" style="flex-direction:row; align-items:center; justify-content:space-between;"><span class="label">KİTAPÇIK</span> <div style="display:flex; gap:2mm;"><div style="border:1px solid #000; width:4mm; height:4mm; display:flex; align-items:center; justify-content:center; font-size:6pt;">A</div><div style="border:1px solid #000; width:4mm; height:4mm; display:flex; align-items:center; justify-content:center; font-size:6pt;">B</div></div></div>
+               </div>
+               <div class="questions-container">
+                  ${Array.from({ length: colCount }).map((_, cIdx) => `
+                     <div class="col">
+                        ${Array.from({ length: qPerCol }).map((_, rIdx) => {
+            const qNum = cIdx * qPerCol + rIdx + 1;
+            if (qNum > qCount) return '';
+            return `
+                              <div class="q-row">
+                                 <div class="q-no">${qNum}</div>
+                                 <div class="options">
+                                    ${['A', 'B', 'C', 'D', 'E'].map(o => `<div class="opt">${o}</div>`).join('')}
+                                 </div>
+                              </div>`;
+         }).join('')}
+                     </div>
+                  `).join('')}
+               </div>
+               <div class="footer"><div class="footer-code">SENKRON-V3-${qCount}-${new Date().getFullYear()}</div></div>
+            </div>`;
+      }
+      w.document.write(htmlContent); w.document.close();
+   };
    const handleToggleTeacherShift = () => { if (!editMode || !teacher) return onWatchModeAttempt?.(); const newShift = teacher.preferredShift === ShiftType.SABAH ? ShiftType.OGLE : ShiftType.SABAH; setTeachers(teachers.map(t => t.id === teacher.id ? { ...t, preferredShift: newShift } : t)); onSuccess(`VARDİYA_DEĞİŞTİRİLDİ: ${newShift}`); };
    const handleOpenAdd = () => { if (!editMode) return onWatchModeAttempt?.(); setDrawerMode('ADD'); setTeacherData({ name: '', branchShorts: [], lessonCount: 22, shift: ShiftType.SABAH, gender: Gender.MALE, username: '', password: '' }); setIsDrawerOpen(true); };
    const handleEditTeacher = (t: Teacher) => { setEditingTeacherId(t.id); setTeacherData({ name: t.name || '', branchShorts: t.branchShorts || [t.branchShort || ''], lessonCount: t.lessonCount || 22, shift: t.preferredShift || ShiftType.SABAH, gender: t.gender || Gender.MALE, username: t.username || '', password: t.password || '' }); setDrawerMode('EDIT'); setIsDrawerOpen(true); setActiveListActionId(null); };
@@ -1463,9 +1553,14 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                      </div>
                   </div>
                   <div className="p-4 bg-[#162431] border-t border-white/10 flex justify-between items-center shrink-0">
-                     <div className="flex items-center gap-2">
-                        <i className="fa-solid fa-circle-info text-[#a855f7]"></i>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">BU ANAHTAR AI TARAMALARINDA OTOMATİK KULLANILACAKTIR.</span>
+                     <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
+                           <i className="fa-solid fa-circle-info text-[#a855f7]"></i>
+                           <span className="text-[9px] font-bold text-slate-400 uppercase">BU ANAHTAR AI TARAMALARINDA KULLANILACAK</span>
+                        </div>
+                        <button onClick={printOpticalForm} className="px-4 h-8 bg-[#3b82f6]/20 text-[#3b82f6] border border-[#3b82f6]/50 font-black text-[9px] uppercase tracking-widest hover:bg-[#3b82f6] hover:text-white transition-all flex items-center gap-2 rounded-sm ml-4">
+                           <i className="fa-solid fa-print"></i> ŞABLON İNDİR (A5)
+                        </button>
                      </div>
                      <button onClick={handleSaveAnswerKey} className="px-8 h-10 bg-white text-black font-black text-[10px] uppercase tracking-widest hover:brightness-90 transition-all">KAYDET VE KAPAT</button>
                   </div>
