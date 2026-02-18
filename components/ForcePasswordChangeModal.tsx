@@ -3,11 +3,13 @@ import { supabase } from '../services/supabaseClient';
 
 interface Props {
     userId: string;
-    userType: 'teacher' | 'student'; // Gelecekte öğrenci için de kullanılabilir
-    onSuccess: () => void;
+    userType: 'teacher' | 'student';
+    currentUsername?: string;
+    onSuccess: (newUsername: string, newPassword: string) => void;
 }
 
-const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, onSuccess }) => {
+const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, currentUsername, onSuccess }) => {
+    const [newUsername, setNewUsername] = useState(currentUsername || '');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -15,6 +17,15 @@ const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, onSuccess
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!newUsername.trim()) {
+            setError("KULLANICI ADI BOŞ BIRAKILAMAZ");
+            return;
+        }
+        if (newUsername.trim().length < 3) {
+            setError("KULLANICI ADI EN AZ 3 KARAKTER OLMALI");
+            return;
+        }
         if (newPassword.length < 6) {
             setError("ŞİFRE EN AZ 6 KARAKTER OLMALI");
             return;
@@ -29,10 +40,26 @@ const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, onSuccess
 
         try {
             const table = userType === 'teacher' ? 'teachers' : 'students';
+            const trimmedUsername = newUsername.trim();
+
+            // Aynı kullanıcı adının başkası tarafından kullanılıp kullanılmadığını kontrol et
+            const { data: existing } = await supabase
+                .from(table)
+                .select('id')
+                .eq('username', trimmedUsername)
+                .neq('id', userId)
+                .maybeSingle();
+
+            if (existing) {
+                setError("BU KULLANICI ADI ZATEN KULLANIMDA. BAŞKA BİR AD SEÇİN.");
+                setLoading(false);
+                return;
+            }
 
             const { error: updateError } = await supabase
                 .from(table)
                 .update({
+                    username: trimmedUsername,
                     password: newPassword,
                     is_first_login: false
                 })
@@ -40,10 +67,10 @@ const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, onSuccess
 
             if (updateError) throw updateError;
 
-            onSuccess();
+            onSuccess(trimmedUsername, newPassword);
         } catch (err: any) {
-            console.error("Password Update Error:", err);
-            setError("ŞİFRE GÜNCELLENEMEDİ: " + err.message);
+            console.error("Credential Update Error:", err);
+            setError("GÜNCELLENEMEDİ: " + err.message);
         } finally {
             setLoading(false);
         }
@@ -57,15 +84,27 @@ const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, onSuccess
                     <h2 className="text-xl font-black text-white uppercase tracking-widest">GÜVENLİK UYARISI</h2>
                     <p className="text-[10px] font-bold text-red-400 mt-2 uppercase tracking-wide">
                         BU HESAP İLE İLK KEZ GİRİŞ YAPIYORSUNUZ.<br />
-                        DEVAM ETMEK İÇİN KENDİ ŞİFRENİZİ BELİRLEMENİZ ZORUNLUDUR.
+                        DEVAM ETMEK İÇİN KENDİ KULLANICI ADINIZI VE ŞİFRENİZİ BELİRLEMENİZ ZORUNLUDUR.
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-4">
                     <div className="space-y-1">
+                        <label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">YENİ KULLANICI ADI</label>
+                        <input
+                            type="text"
+                            className="w-full h-12 bg-black border border-red-900/50 focus:border-red-500 text-white px-4 font-bold outline-none transition-colors"
+                            placeholder="EN AZ 3 KARAKTER"
+                            value={newUsername}
+                            onChange={e => setNewUsername(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    <div className="space-y-1">
                         <label className="text-[7px] font-black text-slate-500 uppercase tracking-widest">YENİ ŞİFRE</label>
                         <input
-                            type="text" // Kullanıcı ne yazdığını görsün (ilk şifreleme için daha iyi olabilir, veya password)
+                            type="text"
                             className="w-full h-12 bg-black border border-red-900/50 focus:border-red-500 text-white px-4 font-bold outline-none transition-colors"
                             placeholder="EN AZ 6 KARAKTER"
                             value={newPassword}
@@ -96,7 +135,7 @@ const ForcePasswordChangeModal: React.FC<Props> = ({ userId, userType, onSuccess
                         disabled={loading}
                         className="w-full h-14 bg-red-600 hover:bg-red-500 text-white font-black text-[11px] uppercase tracking-[0.3em] shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? 'GÜNCELLENİYOR...' : 'ŞİFREYİ KAYDET VE GİRİŞ YAP'}
+                        {loading ? 'GÜNCELLENİYOR...' : 'KAYDET VE GİRİŞ YAP'}
                     </button>
                 </form>
             </div>

@@ -786,10 +786,20 @@ const App: React.FC = () => {
         <ForcePasswordChangeModal
           userId={session.id}
           userType={session.role === UserRole.TEACHER ? 'teacher' : 'student'}
-          onSuccess={() => {
+          currentUsername={teachers.find(t => t.id === session.id)?.username || ''}
+          onSuccess={(newUsername: string, newPassword: string) => {
+            // Session'ı güncelle
             setSession(prev => prev ? ({ ...prev, isFirstLogin: false }) : null);
             localStorage.setItem('senkron_session', JSON.stringify({ ...session, isFirstLogin: false }));
-            triggerSuccess("ŞİFRE GÜNCELLENDİ");
+
+            // Öğretmenin kimlik bilgilerini local state'te güncelle
+            setTeachers(prev => prev.map(t =>
+              t.id === session.id
+                ? { ...t, username: newUsername, password: newPassword }
+                : t
+            ));
+
+            triggerSuccess("KİMLİK BİLGİLERİ GÜNCELLENDİ");
           }}
         />
       )}
