@@ -52,6 +52,12 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    allClasses = [], allLessons = [], setActiveModule, onNavigateToClass, onDeleteTeacher, onDeleteTeacherDB, initialTeacherId,
    initialTab, activeTab, schoolConfig, onSuccess, onWatchModeAttempt, userRole, currentUserId
 }) => {
+   const isAdmin = useMemo(() => {
+      if (userRole === UserRole.ADMIN) return true;
+      const r = String(userRole || '').toUpperCase();
+      return r === 'ADMIN' || r === 'İDARECİ' || r === 'YÖNETİCİ';
+   }, [userRole]);
+
    const [searchTerm, setSearchTerm] = useState('');
    const [shiftFilter, setShiftFilter] = useState<'TÜMÜ' | ShiftType>('TÜMÜ');
    const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(initialTeacherId || null);
@@ -108,6 +114,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    // CEVAP ANAHTARI STATE
    const [lessonAnswerKeys, setLessonAnswerKeys] = useState<Record<string, Record<string, Record<'A' | 'B', Record<string, { key: string, points: number }>>>>>({});
    const [activeKeyGroup, setActiveKeyGroup] = useState<'A' | 'B'>('A');
+   const [questionCount, setQuestionCount] = useState<number>(20); // Dinamik Soru Sayısı
 
    const [activeSemester, setActiveSemester] = useState<1 | 2>(1);
    const [activeExamSlot, setActiveExamSlot] = useState<number>(1); // 1-4 yazılı, 5 sözlü
@@ -563,9 +570,60 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    const handleGradeImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (evt) => { const imgData = evt.target?.result as string; setCapturedImage(imgData); setIsGradeScannerOpen(true); processGradeScan(imgData); }; reader.readAsDataURL(file); } if (gradeImageInputRef.current) gradeImageInputRef.current.value = ''; };
    useEffect(() => { const startCamera = async (ref: React.RefObject<HTMLVideoElement | null>) => { try { const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' } }); if (ref.current) ref.current.srcObject = stream; } catch (err) { console.error("Kamera hatası:", err); } }; if (isAttendanceTerminalOpen && attendanceViewMode === 'SCANNER' && !capturedImage) startCamera(videoRef); if (isGradeScannerOpen && !capturedImage) startCamera(gradeVideoRef); return () => { [videoRef, gradeVideoRef].forEach(ref => { if (ref.current && ref.current.srcObject) { (ref.current.srcObject as MediaStream).getTracks().forEach(track => track.stop()); } }); }; }, [isAttendanceTerminalOpen, isGradeScannerOpen, capturedImage, attendanceViewMode]);
 
+   // MODAL AÇILDIĞINDA SORU SAYISINI AUTOMATİK BELİRLE
+   useEffect(() => {
+      if (isAnswerKeyModalOpen && gradeTerminalTarget) {
+         const lessonId = gradeTerminalTarget.lessonId;
+         const field = getTargetField();
+         const currentKeys = lessonAnswerKeys[lessonId]?.[field] || {};
+         let maxQ = 20;
+         ['A', 'B'].forEach(grp => {
+            const grpKeys = currentKeys[grp as 'A' | 'B'] || {};
+            const indices = Object.keys(grpKeys).map(Number);
+            if (indices.length > 0) {
+               const m = Math.max(...indices);
+               if (m > maxQ) maxQ = m;
+            }
+         });
+         const allowed = [10, 20, 25, 40, 50, 100];
+         let selected = 20;
+         for (const n of allowed) {
+            if (maxQ <= n) { selected = n; break; }
+            selected = 100;
+         }
+         setQuestionCount(selected);
+      }
+   }, [isAnswerKeyModalOpen, gradeTerminalTarget]);
+
    const planShiftView = useMemo(() => teacher?.preferredShift || ShiftType.SABAH, [teacher]);
    const HOURS = useMemo(() => { const count = planShiftView === ShiftType.SABAH ? schoolConfig.morningPeriodCount : schoolConfig.afternoonPeriodCount; const arr = []; for (let i = 1; i <= count; i++) arr.push(i); return arr; }, [schoolConfig, planShiftView]);
-   const dailyAgenda = useMemo(() => { if (!teacher || !teacher.name) return []; const todayName = DAYS[new Date().getDay() - 1] || 'Pazartesi'; const dayShort = standardizeDayCode(todayName); return schedule.filter(s => s.ogretmen && s.ogretmen.toUpperCase() === teacher.name.toUpperCase() && standardizeDayCode(s.gun) === dayShort).sort((a, b) => a.ders_saati - b.ders_saati); }, [teacher, schedule]);
+   const dailyAgenda = useMemo(() => {
+      if (!teacher || !teacher.name) return [];
+      const dayIdx = new Date().getDay();
+      // Pazar (0) veya Cumartesi (6) ise boş dön
+      // Ancak kullanıcı hafta sonu da olsa Pazartesi planını görmek istemiyorsa boş liste dönmeli.
+      // Ekranda "BUGÜNKÜ DERS AKIŞI" yazıyor.
+      if (dayIdx === 0 || dayIdx === 6) return [];
+
+      const todayName = DAYS[dayIdx - 1];
+      if (!todayName) return [];
+
+      const dayShort = standardizeDayCode(todayName);
+      return schedule.filter(s => {
+         if (standardizeDayCode(s.gun) !== dayShort) return false;
+         const og = (s.ogretmen || '').toUpperCase();
+         const tn = teacher.name.toUpperCase();
+         const ti = (teacher.id || '').toUpperCase();
+         if (og === tn) return true;
+         if (og === ti) return true;
+         const parts = teacher.name.trim().split(/\s+/);
+         if (parts.length > 1) {
+            const fmt = `${parts[0][0]}.${parts[parts.length - 1]}`.toUpperCase();
+            if (og === fmt) return true;
+         }
+         return false;
+      }).sort((a, b) => a.ders_saati - b.ders_saati);
+   }, [teacher, schedule]);
    // ... (Other calculations unchanged) ...
    const filtered = useMemo(() => { const term = searchTerm.toLowerCase(); return teachers.filter(t => { if (!t) return false; const bShorts = t.branchShorts || [t.branchShort || '']; const matchSearch = (t.name || '').toLowerCase().includes(term) || bShorts.some(b => b.toLowerCase().includes(term)); return matchSearch && (shiftFilter === 'TÜMÜ' || (t.preferredShift || ShiftType.SABAH) === shiftFilter); }); }, [teachers, searchTerm, shiftFilter]);
    const teacherStats = useMemo(() => ({ male: teachers.filter(t => t.gender === Gender.MALE).length, female: teachers.filter(t => t.gender === Gender.FEMALE).length }), [teachers]);
@@ -713,6 +771,10 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                            const classObj = allClasses.find(c => c.name === entry.sinif);
                            const hasLog = classObj?.lessonLogs?.some(l => l.date === todayStr && l.hour === entry.ders_saati);
 
+                           // Ders adını çözümle (ID ise ismini bul)
+                           const lessonObj = allLessons.find(l => l.id === entry.ders || l.name === entry.ders);
+                           const lessonName = lessonObj ? lessonObj.name : entry.ders;
+
                            return (
                               <div key={idx} className="bg-[#1e293b] border border-white/5 p-4 flex flex-col gap-4 shadow-xl relative overflow-hidden">
                                  <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: classColor }}></div>
@@ -720,14 +782,14 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                     <div className="w-10 h-10 border border-white/10 flex flex-col items-center justify-center bg-black/20 shrink-0"><span className="text-[14px] font-black text-white">{entry.ders_saati}</span><span className="text-[6px] font-black text-slate-500 uppercase">SAAT</span></div>
                                     <div className="flex flex-col justify-center min-w-0">
                                        <div className="text-[13px] font-medium text-white/70 uppercase leading-tight truncate">
-                                          {entry.ders}
+                                          {lessonName}
                                        </div>
                                        <div className="text-[9px] font-black text-[#3b82f6] uppercase tracking-widest mt-1">{entry.sinif} ŞUBESİ</div>
                                     </div>
                                     <button onClick={(e) => { e.stopPropagation(); setIsAttendanceTerminalOpen(false); setTimeout(() => setIsAttendanceTerminalOpen(false), 100); }} className="ml-auto w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white transition-all"><i className="fa-solid fa-xmark"></i></button>
                                  </div>
                                  <div className="flex items-center gap-2 pt-2 border-t border-white/5 w-full">
-                                    {userRole !== UserRole.ADMIN && (
+                                    {!isAdmin && (
                                        <>
                                           <button onClick={(e) => { e.stopPropagation(); handleStartAttendance(entry); }} className="flex-1 h-10 bg-[#3b82f6]/20 border border-[#3b82f6]/40 text-[#3b82f6] font-black text-[9px] uppercase tracking-widest hover:bg-[#3b82f6] hover:text-white transition-all shadow-lg shadow-[#3b82f6]/10 relative group flex items-center justify-center gap-2" >
                                              {isUploadingProof ? <i className="fa-solid fa-cloud-arrow-up animate-bounce"></i> : <i className="fa-solid fa-clipboard-check"></i>}
@@ -773,7 +835,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
                                  {/* Alt Satır: Aksiyon Butonları */}
                                  <div className="flex items-center gap-2 pl-2 w-full mt-2">
-                                    {userRole !== UserRole.ADMIN && (
+                                    {!isAdmin && (
                                        <>
                                           {/* EXAM SCHEDULE BUTTON */}
                                           <button onClick={(e) => { e.stopPropagation(); setExamSchedulerTarget({ classId: a.classId, className: a.className, lessonId: a.lessonId, lessonName: a.lesson?.name || 'DERS' }); setExamSchedulerForm({ date: '', slot: 'exam1' }); setIsExamSchedulerOpen(true); }} className="h-9 w-10 flex items-center justify-center bg-orange-600/10 border border-orange-500/40 text-orange-500 hover:bg-orange-600 hover:text-white transition-all shadow-lg rounded-sm shrink-0" title="Sınav Planla"> <i className="fa-solid fa-calendar-plus text-xs"></i> </button>
@@ -860,7 +922,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                     </div>
 
                                     {/* 3 DOTS MENU TRIGGER */}
-                                    {userRole !== UserRole.ADMIN && (
+                                    {!isAdmin && (
                                        <div className="flex items-center h-full pl-4 border-l border-white/5 ml-2">
                                           <button
                                              onClick={(e) => { e.stopPropagation(); setActiveExamMenuId(isMenuOpen ? null : exam.id); }}
@@ -938,7 +1000,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                     <div className="flex items-center gap-3">
                                        <div className="w-10 h-10 flex items-center justify-center bg-black/20 border border-white/10 font-black text-white text-sm">{stat.className}</div>
                                        <div className="flex flex-col">
-                                          <span className="text-[12px] font-black text-white uppercase">{stat.lessonName}</span>
+                                          <span className="text-[11px] font-medium text-white/70 uppercase">{stat.lessonName}</span>
                                           <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">{stat.studentCount} ÖĞRENCİ</span>
                                        </div>
                                     </div>
@@ -991,7 +1053,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                           <div className="flex items-center gap-3 min-w-0">
                                              <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-black text-[10px] ${s.gender === Gender.FEMALE ? 'border-pink-500/30 text-pink-500 bg-pink-500/5' : 'border-blue-500/30 text-blue-500 bg-blue-500/5'}`}>{s.number}</div>
                                              <div className="flex flex-col min-w-0">
-                                                <span className="text-[11px] font-black text-white uppercase truncate">{s.name}</span>
+                                                <span className="text-[11px] font-medium text-white/70 uppercase truncate">{s.name}</span>
                                                 <div className="flex items-center gap-2">
                                                    <span className={`text-[8px] font-bold ${s.displayAbsent && s.displayAbsent > 0 ? 'text-red-500' : 'text-green-500'}`}>{s.displayAbsent || 0} DEVAMSIZ</span>
                                                 </div>
@@ -1346,16 +1408,33 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                      <button onClick={() => setIsAnswerKeyModalOpen(false)} className="w-10 h-10 border border-white/10 text-white/40 hover:text-white transition-all"><i className="fa-solid fa-xmark text-lg"></i></button>
                   </div>
 
-                  <div className="p-2 bg-black/40 border-b border-white/5 flex gap-2 shrink-0">
-                     <button onClick={() => setActiveKeyGroup('A')} className={`flex-1 h-10 font-black text-[10px] uppercase tracking-widest border transition-all ${activeKeyGroup === 'A' ? 'bg-[#a855f7] text-white border-[#a855f7]' : 'bg-transparent text-slate-500 border-white/10 hover:text-white'}`}>A GRUBU KİTAPÇIĞI</button>
-                     <button onClick={() => setActiveKeyGroup('B')} className={`flex-1 h-10 font-black text-[10px] uppercase tracking-widest border transition-all ${activeKeyGroup === 'B' ? 'bg-[#a855f7] text-white border-[#a855f7]' : 'bg-transparent text-slate-500 border-white/10 hover:text-white'}`}>B GRUBU KİTAPÇIĞI</button>
+                  <div className="p-2 bg-black/40 border-b border-white/5 flex flex-col gap-2 shrink-0">
+                     <div className="flex items-center justify-between px-1 border-b border-white/5 pb-2">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SORU SAYISI SEÇİMİ:</span>
+                        <div className="flex gap-1">
+                           {[10, 20, 25, 30, 40, 50, 100].map(n => (
+                              <button
+                                 key={n}
+                                 onClick={() => setQuestionCount(n)}
+                                 className={`px-3 py-1 text-[9px] font-black border transition-all ${questionCount === n ? 'bg-[#a855f7] text-white border-[#a855f7]' : 'bg-[#0f172a] text-slate-500 border-white/10 hover:text-white'}`}
+                              >
+                                 {n}
+                              </button>
+                           ))}
+                        </div>
+                     </div>
+                     <div className="flex gap-2">
+                        <button onClick={() => setActiveKeyGroup('A')} className={`flex-1 h-10 font-black text-[10px] uppercase tracking-widest border transition-all ${activeKeyGroup === 'A' ? 'bg-[#a855f7] text-white border-[#a855f7]' : 'bg-transparent text-slate-500 border-white/10 hover:text-white'}`}>A GRUBU KİTAPÇIĞI</button>
+                        <button onClick={() => setActiveKeyGroup('B')} className={`flex-1 h-10 font-black text-[10px] uppercase tracking-widest border transition-all ${activeKeyGroup === 'B' ? 'bg-[#a855f7] text-white border-[#a855f7]' : 'bg-transparent text-slate-500 border-white/10 hover:text-white'}`}>B GRUBU KİTAPÇIĞI</button>
+                     </div>
                   </div>
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar p-4 bg-grid-hatched">
                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {Array.from({ length: 20 }, (_, i) => i + 1).map(qIdx => {
+                        {Array.from({ length: questionCount }, (_, i) => i + 1).map(qIdx => {
                            const targetField = getTargetField();
-                           const existingKey = lessonAnswerKeys[gradeTerminalTarget.lessonId]?.[targetField]?.[activeKeyGroup]?.[qIdx] || { key: '', points: 5 };
+                           const defaultPoints = Math.floor(100 / questionCount);
+                           const existingKey = lessonAnswerKeys[gradeTerminalTarget.lessonId]?.[targetField]?.[activeKeyGroup]?.[qIdx] || { key: '', points: defaultPoints };
 
                            return (
                               <div key={qIdx} className="bg-[#1e293b] border border-white/5 p-2 flex items-center justify-between shadow-sm hover:border-[#a855f7]/50 transition-all group">

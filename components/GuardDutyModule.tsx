@@ -43,11 +43,34 @@ const GuardDutyModule: React.FC<GuardDutyModuleProps> = ({
 
   const activeLocations = useMemo(() => locations.filter(l => l.isActive), [locations]);
 
-  const getTeacherLoadForDay = (teacherName: string, day: string) => {
-    return schedule.filter(s =>
-      s.ogretmen.toUpperCase() === teacherName.toUpperCase() &&
-      (s.gun.toLowerCase() === day.toLowerCase() || s.gun.toLowerCase().startsWith(day.toLowerCase().substring(0, 3)))
-    ).length;
+  const getTeacherLoadForDay = (teacherName: string, day: string, teacherId?: string) => {
+    return schedule.filter(s => {
+      // Gün kontrolü
+      const sDate = s.gun.toUpperCase();
+      const tDate = day.toUpperCase();
+      const dayMatch = sDate === tDate ||
+        (sDate.length >= 3 && tDate.startsWith(sDate.substring(0, 3))) ||
+        (tDate.length >= 3 && sDate.startsWith(tDate.substring(0, 3)));
+
+      if (!dayMatch) return false;
+
+      // Öğretmen kontrolü (ID veya İsim)
+      const schedTeacher = s.ogretmen.toUpperCase();
+      const targetName = teacherName.toUpperCase();
+      const targetId = (teacherId || '').toUpperCase();
+
+      if (schedTeacher === targetName) return true;
+      if (teacherId && schedTeacher === targetId) return true;
+
+      // Formatlı isim kontrolü (Ö.ARAS)
+      const parts = teacherName.trim().split(/\s+/);
+      if (parts.length > 1) {
+        const fmt = `${parts[0][0]}.${parts[parts.length - 1]}`.toUpperCase();
+        if (schedTeacher === fmt) return true;
+      }
+
+      return false;
+    }).length;
   };
 
   const handleAddLocation = () => {
@@ -389,7 +412,7 @@ const GuardDutyModule: React.FC<GuardDutyModuleProps> = ({
         {currentGuardians.length > 0 ? (
           currentGuardians.map(t => {
             const duty = (t.guardDuties || []).find(d => d.day === activeDay)!;
-            const load = getTeacherLoadForDay(t.name, activeDay);
+            const load = getTeacherLoadForDay(t.name, activeDay, t.id);
             const isHeavy = load / schoolConfig.dailyPeriodCount > 0.8;
             const isCurrentUser = currentUserId && t.id === currentUserId;
 
