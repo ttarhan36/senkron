@@ -4,9 +4,10 @@ import { Teacher, Student } from '../types';
 
 interface CredentialsModuleProps {
     onSuccess: (msg: string) => void;
+    schoolId: string;
 }
 
-const CredentialsModule: React.FC<CredentialsModuleProps> = ({ onSuccess }) => {
+const CredentialsModule: React.FC<CredentialsModuleProps> = ({ onSuccess, schoolId }) => {
     const [activeTab, setActiveTab] = useState<'TEACHERS' | 'STUDENTS'>('TEACHERS');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -22,14 +23,14 @@ const CredentialsModule: React.FC<CredentialsModuleProps> = ({ onSuccess }) => {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (schoolId) fetchData();
+    }, [schoolId]);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const { data: tData } = await supabase.from('teachers').select('*').order('name');
-            const { data: sData } = await supabase.from('students').select('*').order('name');
+            const { data: tData } = await supabase.from('teachers').select('*').eq('school_id', schoolId).order('name');
+            const { data: sData } = await supabase.from('students').select('*').eq('school_id', schoolId).order('name');
 
             if (tData) setTeachers(tData);
             if (sData) setStudents(sData);
