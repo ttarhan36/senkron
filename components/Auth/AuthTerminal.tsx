@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
 import { UserRole, UserSession } from '../../types';
 
@@ -27,6 +27,53 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
   const [schoolIdInput, setSchoolIdInput] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [userPasswordInput, setUserPasswordInput] = useState('');
+
+  // QR Code Login Effect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get('action');
+
+    if (action === 'qrlimit') {
+      const u = params.get('u');
+      const p = params.get('p');
+      const s = params.get('s');
+
+      if (u && p && s) {
+        setLoading(true);
+        // Otomatik Giriş Denemesi
+        (async () => {
+          try {
+            const { data: teacher, error } = await supabase
+              .from('teachers')
+              .select('*')
+              .eq('school_id', s)
+              .eq('username', u)
+              .eq('password', p)
+              .maybeSingle();
+
+            if (error || !teacher) {
+              throw new Error("QR KOD GEÇERSİZ VEYA SÜRESİ DOLMUŞ");
+            }
+
+            onAuthSuccess({
+              role: UserRole.TEACHER,
+              id: teacher.id,
+              name: teacher.name,
+              schoolId: teacher.school_id,
+              isFirstLogin: teacher.is_first_login
+            });
+            triggerSuccess(`QR İLE GİRİŞ BAŞARILI: ${teacher.name}`);
+
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (err: any) {
+            setError(err.message);
+            setLoading(false);
+          }
+        })();
+      }
+    }
+  }, []);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -183,7 +230,8 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
         role: UserRole.STUDENT,
         id: student.number,
         name: student.name,
-        schoolId: targetSchoolId
+        schoolId: targetSchoolId,
+        isFirstLogin: student.is_first_login
       });
       triggerSuccess(`HOŞ GELDİN ${student.name.split(' ')[0]}`);
 
@@ -246,7 +294,8 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
         role: UserRole.TEACHER,
         id: teacher.id,
         name: teacher.name,
-        schoolId: targetSchoolId
+        schoolId: targetSchoolId,
+        isFirstLogin: teacher.is_first_login
       });
       triggerSuccess(`HOŞ GELDİNİZ HOCAM`);
 

@@ -7,10 +7,11 @@ export enum UserRole {
 
 export interface UserSession {
   role: UserRole;
-  id: string; 
+  id: string;
   name: string;
   schoolId: string;
   email?: string;
+  isFirstLogin?: boolean;
 }
 
 export enum ModuleType {
@@ -92,7 +93,7 @@ export interface Exam {
   id: string;
   lessonId: string;
   slot: 'exam1' | 'exam2' | 'exam3' | 'exam4' | 'exam5' | 'exam6' | 'exam7' | 'exam8';
-  date: string; 
+  date: string;
   status: 'PLANNED' | 'DONE';
   answerKey?: Record<'A' | 'B', Record<string, { key: string, points: number }>>;
 }
@@ -125,7 +126,7 @@ export interface Course {
   teacherName: string;
   capacity: number;
   enrolledCount: number;
-  schedule: string; 
+  schedule: string;
   category: 'AKADEMİK' | 'SANAT' | 'SPOR' | 'TEKNOLOJİ';
   targetGrades?: number[];
   location?: string;
@@ -150,10 +151,10 @@ export interface Announcement {
   type: CommsType;
   category: CommsCategory;
   timestamp: number;
-  audience: 'ALL' | 'TEACHERS' | string; 
+  audience: 'ALL' | 'TEACHERS' | string;
   isPinned?: boolean;
   readCount: number;
-  location?: string; 
+  location?: string;
 }
 
 export interface Student {
@@ -235,8 +236,8 @@ export interface Teacher {
   loadPercentage?: number;
   restrictedDays?: string[];
   blockedSlots?: string[];
-  guardDutyDays: string[]; 
-  guardDuties?: GuardDutyAssignment[]; 
+  guardDutyDays: string[];
+  guardDuties?: GuardDutyAssignment[];
   preferredShift?: ShiftType;
   noMorningLessons?: boolean;
   blockLessonsPriority?: boolean;

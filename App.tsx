@@ -15,6 +15,7 @@ import GuardDutyModule from './components/GuardDutyModule';
 import CommunicationModule from './components/CommunicationModule';
 import CoursesModule from './components/CoursesModule';
 import AuthTerminal from './components/Auth/AuthTerminal';
+import ForcePasswordChangeModal from './components/ForcePasswordChangeModal';
 import { supabase } from './services/supabaseClient';
 import { standardizeBranchCode, standardizeDayCode } from './utils';
 
@@ -769,6 +770,17 @@ const App: React.FC = () => {
 
   return (
     <div className={`flex h-screen overflow-hidden ${theme.mode === ThemeMode.DARK ? 'bg-[#080c10] text-[#e4e4e7]' : 'bg-[#f3f4f6] text-[#000000]'}`} style={{ fontFamily: `'${theme.fontFamily}', monospace` }}>
+      {session.isFirstLogin && (
+        <ForcePasswordChangeModal
+          userId={session.id}
+          userType={session.role === UserRole.TEACHER ? 'teacher' : 'student'}
+          onSuccess={() => {
+            setSession(prev => prev ? ({ ...prev, isFirstLogin: false }) : null);
+            localStorage.setItem('senkron_session', JSON.stringify({ ...session, isFirstLogin: false }));
+            triggerSuccess("ŞİFRE GÜNCELLENDİ");
+          }}
+        />
+      )}
       <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} editMode={isAdmin ? editMode : false} setEditMode={setEditMode} userRole={session.role} dbError={dbError} />
       <main className="flex-1 flex flex-col overflow-hidden relative bg-grid-hatched">
         <header className="h-10 border-b border-[#354a5f]/40 bg-[#0d141b]/95 backdrop-blur-md z-[60] flex items-center justify-between px-4">

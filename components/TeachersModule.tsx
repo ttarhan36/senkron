@@ -4,6 +4,7 @@ import { Teacher, ScheduleEntry, ClassSection, Lesson, ModuleType, ShiftType, Sc
 import { getSectionColor, getBranchColor, hexToRgba, standardizeBranchCode, parseGradeFromName, standardizeDayCode } from '../utils';
 import { analyzeAttendanceImage, analyzeGradeImage } from '../services/geminiService';
 import { supabase } from '../services/supabaseClient';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface TeachersModuleProps {
    teachers: Teacher[];
@@ -140,6 +141,11 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
    const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
    const [selectedContextTab, setSelectedContextTab] = useState<string | null>(null);
+
+   // QR Code State
+   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+   const [qrData, setQrData] = useState<string>('');
+   const [qrTeacherName, setQrTeacherName] = useState<string>('');
 
    useEffect(() => {
       if (userRole === UserRole.TEACHER && currentUserId) {
@@ -722,8 +728,105 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    const handleToggleTeacherShift = () => { if (!editMode || !teacher) return onWatchModeAttempt?.(); const newShift = teacher.preferredShift === ShiftType.SABAH ? ShiftType.OGLE : ShiftType.SABAH; setTeachers(teachers.map(t => t.id === teacher.id ? { ...t, preferredShift: newShift } : t)); onSuccess(`VARDİYA_DEĞİŞTİRİLDİ: ${newShift}`); };
    const handleOpenAdd = () => { if (!editMode) return onWatchModeAttempt?.(); setDrawerMode('ADD'); setTeacherData({ name: '', branchShorts: [], lessonCount: 22, shift: ShiftType.SABAH, gender: Gender.MALE, username: '', password: '' }); setIsDrawerOpen(true); };
    const handleEditTeacher = (t: Teacher) => { setEditingTeacherId(t.id); setTeacherData({ name: t.name || '', branchShorts: t.branchShorts || [t.branchShort || ''], lessonCount: t.lessonCount || 22, shift: t.preferredShift || ShiftType.SABAH, gender: t.gender || Gender.MALE, username: t.username || '', password: t.password || '' }); setDrawerMode('EDIT'); setIsDrawerOpen(true); setActiveListActionId(null); };
-   const handleSaveTeacher = () => { if (!teacherData.name || teacherData.branchShorts.length === 0) return; const standardizedBranchShorts = teacherData.branchShorts.map(b => standardizeBranchCode(b)); if (drawerMode === 'ADD') { const timestamp = Date.now(); const randomSuffix = Math.random().toString(36).substring(2, 5).toUpperCase(); const newId = `T-${timestamp}-${randomSuffix}`; const newTeacher: Teacher = { id: newId, name: teacherData.name.toUpperCase().trim(), gender: teacherData.gender, branch: standardizedBranchShorts[0], branchShort: standardizedBranchShorts[0], branches: standardizedBranchShorts, branchShorts: standardizedBranchShorts, lessonCount: teacherData.lessonCount, preferredShift: teacherData.shift, availableDays: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'], blockedSlots: [], guardDutyDays: [], username: teacherData.username, password: teacherData.password }; setTeachers([...teachers, newTeacher]); onSuccess("PERSONEL_KAYDEDİLDİ"); } else if (editingTeacherId) { setTeachers(teachers.map(t => t.id === editingTeacherId ? { ...t, name: teacherData.name.toUpperCase().trim(), gender: teacherData.gender, branchShort: standardizedBranchShorts[0], branchShorts: standardizedBranchShorts, branches: standardizedBranchShorts, lessonCount: teacherData.lessonCount, preferredShift: teacherData.shift, username: teacherData.username, password: teacherData.password } : t)); onSuccess("PERSONEL_GÜNCELLENDİ"); } setIsDrawerOpen(false); };
-   const handleUpdateSelfCredentials = () => { if (!teacher || !credentials.username) return; setTeachers(teachers.map(t => t.id === teacher.id ? { ...t, username: credentials.username, password: credentials.password } : t)); onSuccess("KİMLİK BİLGİLERİ GÜNCELLENDİ"); };
+   const handleSaveTeacher = async () => {
+      if (!teacherData.name || teacherData.branchShorts.length === 0) return;
+
+      const standardizedBranchShorts = teacherData.branchShorts.map(b => standardizeBranchCode(b));
+      const normalizedUsername = teacherData.username?.trim();
+
+      // Check for duplicate username
+      if (normalizedUsername) {
+         const isDuplicate = teachers.some(t => t.username === normalizedUsername && t.id !== editingTeacherId);
+         if (isDuplicate) {
+            onSuccess("BU KULLANICI ADI ZATEN KULLANIMDA");
+            return;
+         }
+      }
+
+      // Determine School ID
+      const schoolId = (teachers.find(t => (t as any).school_id) as any)?.school_id ||
+         (allClasses.find(c => (c as any).school_id) as any)?.school_id;
+
+      if (!schoolId && teachers.length === 0) {
+         onSuccess("SİSTEM HATASI: OKUL KİMLİĞİ BULUNAMADI. LÜTFEN SAYFAYI YENİLEYİN.");
+         return;
+      }
+
+      const dbPayload = {
+         name: teacherData.name.toUpperCase().trim(),
+         gender: teacherData.gender,
+         branch: standardizedBranchShorts[0],
+         branch_short: standardizedBranchShorts[0],
+         lesson_count: teacherData.lessonCount,
+         preferred_shift: teacherData.shift,
+         username: normalizedUsername,
+         password: teacherData.password,
+         school_id: schoolId,
+         available_days: ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma'],
+         is_first_login: drawerMode === 'ADD' ? true : undefined
+      };
+
+      try {
+         if (drawerMode === 'ADD') {
+            const { data, error } = await supabase.from('teachers').insert([dbPayload]).select().single();
+            if (error) throw error;
+
+            // Map back to local Teacher interface
+            const savedTeacher: Teacher = {
+               ...data,
+               id: data.id,
+               branchShort: data.branch_short,
+               branchShorts: [data.branch_short],
+               preferredShift: data.preferred_shift,
+               lessonCount: data.lesson_count,
+               availableDays: data.available_days || [],
+               blockedSlots: data.blocked_slots || [],
+               guardDutyDays: data.guard_duty_days || [],
+               isExemptFromDuty: data.is_exempt_from_duty,
+               isFirstLogin: data.is_first_login // Mapped property
+            };
+
+            setTeachers([...teachers, savedTeacher]);
+            onSuccess("PERSONEL KAYDEDİLDİ");
+         } else if (editingTeacherId) {
+            const { data, error } = await supabase.from('teachers').update(dbPayload).eq('id', editingTeacherId).select().single();
+            if (error) throw error;
+
+            setTeachers(teachers.map(t => t.id === editingTeacherId ? {
+               ...t,
+               ...data,
+               branchShort: data.branch_short,
+               preferredShift: data.preferred_shift,
+               lessonCount: data.lesson_count,
+               name: data.name,
+               username: data.username,
+               password: data.password
+            } : t));
+            onSuccess("PERSONEL GÜNCELLENDİ");
+         }
+         setIsDrawerOpen(false);
+      } catch (err: any) {
+         console.error(err);
+         onSuccess("KAYIT HATASI: " + err.message);
+      }
+   };
+   const handleUpdateSelfCredentials = async () => {
+      if (!teacher || !credentials.username) return;
+      try {
+         const { error } = await supabase.from('teachers').update({
+            username: credentials.username,
+            password: credentials.password
+         }).eq('id', teacher.id);
+
+         if (error) throw error;
+
+         setTeachers(teachers.map(t => t.id === teacher.id ? { ...t, username: credentials.username, password: credentials.password } : t));
+         onSuccess("KİMLİK BİLGİLERİ GÜNCELLENDİ");
+      } catch (err: any) {
+         console.error(err);
+         onSuccess("GÜNCELLEME HATASI: " + err.message);
+      }
+   };
    const updateTeacherQuota = (teacherId: string, newVal: number) => { setTeachers(teachers.map(t => t.id === teacherId ? { ...t, lessonCount: Math.max(0, newVal) } : t)); };
    const executeDeleteTeacher = () => { if (!teacherToDelete) return; const idToDel = teacherToDelete.id; if (onDeleteTeacherDB) onDeleteTeacherDB(idToDel); setTeachers(teachers.filter(t => t.id !== idToDel)); setTeacherToDelete(null); };
 
@@ -732,6 +835,25 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
       const newVal = !teacher.isExemptFromDuty;
       setTeachers(teachers.map(t => t.id === teacher.id ? { ...t, isExemptFromDuty: newVal } : t));
       onSuccess(newVal ? "PERSONEL NÖBETTEN MUAF TUTULDU" : "NÖBET MUAFİYETİ KALDIRILDI");
+   };
+
+   const handleGenerateQR = (t: Teacher) => {
+      if (!t.username || !t.password) {
+         onSuccess("QR İÇİN KULLANICI ADI VE ŞİFRE GEREKLİ");
+         return;
+      }
+      // School ID is retrieved from the teacher object (dynamic prop) or we assume current session context
+      // Since we don't have direct access to schoolId prop, we try to get it from the teacher object if it exists (via any)
+      const sid = (t as any).school_id;
+      if (!sid) {
+         onSuccess("OKUL KİMLİĞİ BULUNAMADI");
+         return;
+      }
+
+      const url = `${window.location.origin}/?action=qrlimit&u=${t.username}&p=${t.password}&s=${sid}`;
+      setQrData(url);
+      setQrTeacherName(t.name);
+      setIsQRModalOpen(true);
    };
 
    return (
@@ -824,9 +946,14 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                  )}
                               </div>
 
-                              {canEditCredentials && (
-                                 <button onClick={handleUpdateSelfCredentials} className="w-full mt-2 h-10 bg-[#3b82f6] text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">GÜNCELLE</button>
-                              )}
+                              <div className="flex gap-2 mt-2">
+                                 {canEditCredentials && (
+                                    <button onClick={handleUpdateSelfCredentials} className="flex-1 h-10 bg-[#3b82f6] text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">GÜNCELLE</button>
+                                 )}
+                                 <button onClick={() => handleGenerateQR(teacher)} className="h-10 px-4 bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2" title="Hızlı Giriş QR Kodu">
+                                    <i className="fa-solid fa-qrcode"></i> QR
+                                 </button>
+                              </div>
                            </div>
                         </div>
 
@@ -1221,7 +1348,8 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                        {editMode && <button onClick={(e) => { e.stopPropagation(); setActiveListActionId(isMenuOpen ? null : t.id); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#3b82f6] transition-all"><i className="fa-solid fa-ellipsis-vertical text-lg"></i></button>}
                                     </div>
                                  </div>
-                                 <div className={`absolute right-0 top-0 bottom-0 flex transition-all duration-300 w-32 ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ zIndex: 100 }}>
+                                 <div className={`absolute right-0 top-0 bottom-0 flex transition-all duration-300 w-48 ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ zIndex: 100 }}>
+                                    <button onClick={(e) => { e.stopPropagation(); handleGenerateQR(t); setActiveListActionId(null); }} className="w-16 h-full bg-white text-black flex flex-col items-center justify-center border-l border-white/10 active:brightness-90 transition-all pointer-events-auto shadow-lg"><i className="fa-solid fa-qrcode text-sm mb-1"></i><span className="text-[6px] font-black uppercase">QR</span></button>
                                     <button onClick={(e) => { e.stopPropagation(); handleEditTeacher(t); }} className="w-16 h-full bg-[#3b82f6] text-white flex flex-col items-center justify-center border-l border-white/10 active:brightness-90 transition-all pointer-events-auto"><i className="fa-solid fa-pen text-sm mb-1"></i><span className="text-[6px] font-black uppercase">DÜZENLE</span></button>
                                     <button onClick={(e) => { e.stopPropagation(); setTeacherToDelete(t); setActiveListActionId(null); }} className="w-16 h-full bg-red-600 text-white flex flex-col items-center justify-center border-l border-white/10 active:brightness-90 transition-all pointer-events-auto"><i className="fa-solid fa-trash-can text-sm mb-1"></i><span className="text-[6px] font-black uppercase">SİL</span></button>
                                  </div>
@@ -1581,6 +1709,29 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
          {/* ... Branch Picker ... */}
          {isBranchPickerOpen && (<div className="fixed inset-0 z-[8500] flex items-center justify-center bg-black/95 backdrop-blur-md px-4 py-4"> <div className="bg-[#0d141b] border-2 border-[#fbbf24] p-6 max-md w-full shadow-2xl flex flex-col h-[70vh] rounded-sm bg-grid-hatched"> <div className="flex justify-between items-center mb-6 shrink-0 relative z-20"> <div><h3 className="text-[13px] font-black text-white uppercase tracking-widest">BRANŞ_KATALOĞU</h3></div> <button onClick={() => setIsBranchPickerOpen(false)} className="w-12 h-12 border border-white/10 text-white transition-all bg-black/20 flex items-center justify-center rounded-sm"><i className="fa-solid fa-xmark text-xl"></i></button> </div> <input placeholder="BRANŞ ARA..." className="w-full bg-black border border-white/10 p-3 text-[12px] font-black text-white uppercase mb-4 outline-none focus:border-[#fbbf24] shrink-0" value={branchSearchTerm} onChange={e => setBranchSearchTerm(e.target.value)} /> <div className="flex-1 overflow-y-auto no-scrollbar grid grid-cols-2 gap-2 p-1"> {filteredBranches.map(b => { const isSelected = teacherData.branchShorts.includes(b.code); return (<button key={b.code} onClick={() => toggleBranchSelection(b.code)} className={`p-4 border transition-all text-left flex items-center justify-between group ${isSelected ? 'bg-[#fbbf24] border-[#fbbf24] text-black shadow-lg' : 'bg-[#162431] border-white/5 text-slate-400 hover:border-[#fbbf24]/40 hover:text-white'}`}><div className="flex flex-col"><span className="text-[12px] font-black uppercase">{b.name}</span><span className={`text-[7px] font-bold uppercase ${isSelected ? 'text-black/60' : 'text-slate-600'}`}>{b.code}</span></div>{isSelected && <i className="fa-solid fa-check"></i>}</button>); })} </div> <button onClick={() => setIsBranchPickerOpen(false)} className="w-full h-14 bg-[#fbbf24] text-black font-black text-[11px] uppercase tracking-widest mt-6 shadow-xl active:scale-0.95 transition-all border border-white/10 shrink-0">SEÇİMİ_TAMAMLA</button> </div> </div>)}
+
+         {/* QR CODE MODAL */}
+         {isQRModalOpen && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
+               <div className="bg-white p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 rounded-sm flex flex-col items-center">
+                  <h3 className="text-xl font-black text-black uppercase tracking-widest mb-2 text-center">{qrTeacherName}</h3>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-6">HIZLI GİRİŞ QR KODU</p>
+
+                  <div className="p-4 border-4 border-black mb-6">
+                     <QRCodeCanvas value={qrData} size={200} />
+                  </div>
+
+                  <div className="w-full space-y-2">
+                     <p className="text-[9px] text-center text-slate-400 font-bold uppercase mb-2 px-4">
+                        BU QR KOD İLE İLK GİRİŞ YAPILDIĞINDA ŞİFRE DEĞİŞİKLİĞİ ZORUNLUDUR.
+                     </p>
+                     <button onClick={() => setIsQRModalOpen(false)} className="w-full h-12 bg-black text-white font-black text-[11px] uppercase tracking-widest hover:bg-[#3b82f6] transition-all shadow-xl">
+                        KAPAT
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
 
          {isDrawerOpen && (
             <div className="fixed inset-0 z-[8000] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
