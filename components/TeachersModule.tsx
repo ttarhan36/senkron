@@ -97,6 +97,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
    // NOT TERMİNALİ VE TARAYICI STATE
    const [isGradeTerminalOpen, setIsGradeTerminalOpen] = useState(false);
+   const [gradeSearchTerm, setGradeSearchTerm] = useState('');
    const [isGradeScannerOpen, setIsGradeScannerOpen] = useState(false);
    const [isAnswerKeyModalOpen, setIsAnswerKeyModalOpen] = useState(false);
    const [gradeTerminalTarget, setGradeTerminalTarget] = useState<{ classId: string, className: string, lessonId: string, lessonName: string } | null>(null);
@@ -1041,52 +1042,48 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
                   {/* ... Other Tabs Content (ŞUBE, PLAN, ETC.) ... */}
                   {activeDetailTab === 'ŞUBE' && (
-                     <div className="space-y-3 h-full overflow-y-auto no-scrollbar pb-24 animate-in slide-in-from-bottom-2">
+                     <div className="h-full overflow-y-auto no-scrollbar pb-24 animate-in slide-in-from-bottom-2">
                         <div className="flex items-center justify-between mb-4"><span className="text-[9px] font-black text-[#fbbf24] uppercase tracking-[0.4em] ml-1">GİRİLEN_ŞUBELER_MATRİSİ</span></div>
-                        {teacherAssignments.length > 0 ? teacherAssignments.map((a, idx) => {
-                           const classColor = getSectionColor(a.className);
-                           const isShiftMismatch = teacher.preferredShift && a.classShift !== teacher.preferredShift;
-                           return (
-                              <div key={idx} className={`bg-[#1e293b] border p-3 flex flex-col gap-3 shadow-xl relative overflow-hidden transition-all ${isShiftMismatch ? 'border-red-600/40 bg-red-950/10' : 'border-white/5 hover:bg-slate-800'}`}>
-                                 <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: classColor }}></div>
+                        <div className="grid grid-cols-2 gap-3">
+                           {teacherAssignments.length > 0 ? teacherAssignments.map((a, idx) => {
+                              const classColor = getSectionColor(a.className);
+                              const isShiftMismatch = teacher.preferredShift && a.classShift !== teacher.preferredShift;
+                              return (
+                                 <div key={idx} className={`bg-[#1e293b] border p-2 flex flex-col gap-1 shadow-md relative overflow-hidden transition-all h-24 ${isShiftMismatch ? 'border-red-600/40 bg-red-950/10' : 'border-white/5 hover:bg-slate-800'}`}>
+                                    <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ backgroundColor: classColor }}></div>
 
-                                 {/* Üst Satır: Ders ve Sınıf Bilgisi */}
-                                 <div className="pl-2 w-full">
-                                    <div className="flex items-center justify-between">
-                                       <div className="flex items-center gap-4">
-                                          <span className="text-[22px] font-black text-white uppercase tracking-tighter">{a.className}</span>
-                                          <span className="text-[14px] font-black text-slate-400 uppercase tracking-tight">{standardizeBranchCode(a.lesson?.name || '')}</span>
-                                          <span className="text-[12px] font-bold text-slate-500 flex items-center gap-1.5">
-                                             <div className="w-1 h-1 bg-slate-600 rounded-full"></div>
-                                             {a.hours} Saat
-                                          </span>
+                                    {/* Üst Satır: Sınıf ve Branş */}
+                                    <div className="pl-2 w-full flex justify-between items-start">
+                                       <div className="flex flex-col">
+                                          <div className="flex items-baseline gap-2">
+                                             <span className="text-[16px] font-black text-white leading-none">{a.className}</span>
+                                             <span className="text-[10px] font-bold text-slate-400">{standardizeBranchCode(a.lesson?.name || '')}</span>
+                                          </div>
+                                          <div className="text-[8px] font-medium text-white/80 truncate max-w-[100px] mt-0.5">{a.lesson?.name || 'BELİRSİZ'}</div>
                                        </div>
-                                       <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 border rounded-sm ${a.classShift === ShiftType.SABAH ? 'border-[#3b82f6]/40 text-[#3b82f6]' : 'border-[#fbbf24]/40 text-[#fbbf24]'}`}>{a.classShift}</span>
+                                       <div className="flex flex-col items-end gap-1">
+                                          <span className={`text-[6px] font-black px-1 py-px border rounded-sm ${a.classShift === ShiftType.SABAH ? 'border-blue-500/30 text-blue-500' : 'border-amber-500/30 text-amber-500'}`}>{a.classShift === ShiftType.SABAH ? 'SAB' : 'ÖĞL'}</span>
+                                          <span className="text-[9px] font-black text-white/50">{a.hours}s</span>
+                                       </div>
                                     </div>
-                                    <div className="text-[10px] font-bold text-slate-600 uppercase mt-0.5 leading-tight tracking-widest">{a.lesson?.name || 'BELİRSİZ DERS'}</div>
-                                    {isShiftMismatch && <span className="text-[7px] font-black text-red-500 uppercase tracking-tighter mt-1 block animate-pulse">! VARDIYA_UYUMSUZ (KİLİTLİ)</span>}
-                                 </div>
 
-                                 {/* Alt Satır: Aksiyon Butonları */}
-                                 <div className="flex items-center gap-2 pl-2 w-full mt-2">
-                                    {!isAdmin && (
-                                       <>
-                                          {/* EXAM SCHEDULE BUTTON */}
-                                          <button onClick={(e) => { e.stopPropagation(); setExamSchedulerTarget({ classId: a.classId, className: a.className, lessonId: a.lessonId, lessonName: a.lesson?.name || 'DERS' }); setExamSchedulerForm({ date: '', slot: 'exam1' }); setIsExamSchedulerOpen(true); }} className="h-9 w-10 flex items-center justify-center bg-orange-600/10 border border-orange-500/40 text-orange-500 hover:bg-orange-600 hover:text-white transition-all shadow-lg rounded-sm shrink-0" title="Sınav Planla"> <i className="fa-solid fa-calendar-plus text-xs"></i> </button>
+                                    {isShiftMismatch && <span className="text-[6px] font-black text-red-500 uppercase tracking-tighter mt-1 block animate-pulse pl-2">! UYUMSUZ</span>}
 
-                                          {/* CLASS LOG BUTTON */}
-                                          <button onClick={(e) => { e.stopPropagation(); handleOpenClassLogManager(a.classId, a.className, a.lesson?.name || 'DERS'); }} className="h-9 w-10 flex items-center justify-center bg-[#22d3ee]/10 border border-[#22d3ee]/40 text-[#22d3ee] hover:bg-[#22d3ee] hover:text-black transition-all shadow-lg rounded-sm shrink-0" title="Sınıf Defteri"> <i className="fa-solid fa-book text-xs"></i> </button>
-
-                                          {/* GRADE TERMINAL BUTTON */}
-                                          <button onClick={(e) => { e.stopPropagation(); setGradeTerminalTarget({ classId: a.classId, className: a.className, lessonId: a.lessonId, lessonName: a.lesson?.name || '' }); setIsGradeTerminalOpen(true); }} className="h-9 px-6 border border-[#fbbf24] text-[#fbbf24] bg-[#fbbf24]/5 font-black text-[9px] uppercase tracking-widest hover:bg-[#fbbf24] hover:text-black active:scale-95 transition-all shadow-lg rounded-sm flex items-center justify-center gap-2" >
-                                             <i className="fa-solid fa-pen-nib"></i>
-                                             NOT TERMİNALİ
-                                          </button>
-                                       </>
-                                    )}
-                                 </div>
-                              </div>);
-                        }) : (<div className="py-24 text-center border-2 border-dashed border-white/5 opacity-20"><i className="fa-solid fa-user-slash text-5xl mb-4"></i><p className="text-[10px] font-black uppercase tracking-[0.4em]">BU HOCAYA ŞUBE ATANMAMIŞ</p></div>)}
+                                    {/* Alt Satır: Aksiyon Butonları */}
+                                    <div className="flex items-center gap-1 pl-2 w-full mt-auto">
+                                       {!isAdmin && (
+                                          <>
+                                             <button onClick={(e) => { e.stopPropagation(); setExamSchedulerTarget({ classId: a.classId, className: a.className, lessonId: a.lessonId, lessonName: a.lesson?.name || 'DERS' }); setExamSchedulerForm({ date: '', slot: 'exam1' }); setIsExamSchedulerOpen(true); }} className="h-6 w-6 flex items-center justify-center bg-orange-600/10 border border-orange-500/40 text-orange-500 hover:bg-orange-600 hover:text-white transition-all rounded-sm shrink-0" title="Sınav"> <i className="fa-solid fa-calendar-plus text-[9px]"></i> </button>
+                                             <button onClick={(e) => { e.stopPropagation(); handleOpenClassLogManager(a.classId, a.className, a.lesson?.name || 'DERS'); }} className="h-6 w-6 flex items-center justify-center bg-[#22d3ee]/10 border border-[#22d3ee]/40 text-[#22d3ee] hover:bg-[#22d3ee] hover:text-black transition-all rounded-sm shrink-0" title="Defter"> <i className="fa-solid fa-book text-[9px]"></i> </button>
+                                             <button onClick={(e) => { e.stopPropagation(); setGradeTerminalTarget({ classId: a.classId, className: a.className, lessonId: a.lessonId, lessonName: a.lesson?.name || '' }); setIsGradeTerminalOpen(true); }} className="h-6 flex-1 border border-[#fbbf24] text-[#fbbf24] bg-[#fbbf24]/5 font-black text-[8px] uppercase tracking-widest hover:bg-[#fbbf24] hover:text-black active:scale-95 transition-all rounded-sm flex items-center justify-center gap-1" >
+                                                <i className="fa-solid fa-pen-nib text-[9px]"></i> NOT
+                                             </button>
+                                          </>
+                                       )}
+                                    </div>
+                                 </div>);
+                           }) : (<div className="col-span-2 py-24 text-center border-2 border-dashed border-white/5 opacity-20"><i className="fa-solid fa-user-slash text-5xl mb-4"></i><p className="text-[10px] font-black uppercase tracking-[0.4em]">BU HOCAYA ŞUBE ATANMAMIŞ</p></div>)}
+                        </div>
                      </div>
                   )}
 
@@ -1608,23 +1605,45 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
          )}
 
          {/* GRADE TERMINAL MODAL */}
-         {isGradeTerminalOpen && gradeTerminalTarget && (<div className="fixed inset-0 z-[9500] flex flex-col bg-[#0f172a] animate-in zoom-in-95 duration-200"> <div className="h-16 bg-[#162431] border-b border-white/10 flex items-center justify-between px-6 shrink-0 shadow-2xl z-10"> <div className="flex items-center gap-4"> <div className="w-10 h-10 bg-[#fbbf24] text-black flex items-center justify-center font-black text-lg shadow-[0_0_20px_rgba(251,191,36,0.4)]"> <i className="fa-solid fa-pen-nib"></i> </div> <div> <h2 className="text-[18px] font-black text-white uppercase tracking-tighter leading-none">{gradeTerminalTarget.className}</h2> <span className="text-[10px] font-bold text-[#fbbf24] uppercase tracking-widest mt-1 block">{gradeTerminalTarget.lessonName} NOT GİRİŞİ</span> </div> </div> <div className="flex items-center gap-4"> <div className="flex bg-black/40 p-1 border border-white/10 rounded-sm"> <button onClick={() => setActiveSemester(1)} className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${activeSemester === 1 ? 'bg-[#3b82f6] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>I. DÖNEM</button> <button onClick={() => setActiveSemester(2)} className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest transition-all ${activeSemester === 2 ? 'bg-[#3b82f6] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>II. DÖNEM</button> </div> <button onClick={() => setIsGradeTerminalOpen(false)} className="w-10 h-10 border border-white/10 text-white/40 hover:text-white transition-all"><i className="fa-solid fa-xmark text-xl"></i></button> </div> </div> <div className="flex bg-[#0a0a0a] border-b border-white/5 p-2 gap-2 overflow-x-auto no-scrollbar shrink-0"> {['exam1', 'exam2', 'exam3', 'exam4', 'oral'].map((col, idx) => { const label = col === 'oral' ? 'SÖZLÜ' : `${idx + 1}. YAZILI`; const isActive = activeExamSlot === (col === 'oral' ? 5 : idx + 1); return (<button key={col} onClick={() => setActiveExamSlot(col === 'oral' ? 5 : idx + 1)} className={`flex-1 h-12 flex flex-col items-center justify-center border transition-all ${isActive ? 'bg-[#fbbf24]/10 border-[#fbbf24] text-[#fbbf24]' : 'bg-black border-white/10 text-slate-500 hover:bg-white/5'}`} > <span className="text-[10px] font-black uppercase">{label}</span> {isActive && <div className="w-1.5 h-1.5 bg-[#fbbf24] rounded-full mt-1 shadow-[0_0_10px_#fbbf24]"></div>} </button>); })} </div> <div className="flex-1 overflow-auto bg-grid-hatched p-4"> <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"> {allClasses.find(c => c.id === gradeTerminalTarget.classId)?.students?.map(student => {
-            const gradeRecord = student.grades?.find(g => g.lessonId === gradeTerminalTarget.lessonId) || { lessonId: gradeTerminalTarget.lessonId }; const fieldName = activeExamSlot === 5 ? (activeSemester === 1 ? 'oral1' : 'oral2') : `exam${(activeSemester === 1 ? 0 : 4) + activeExamSlot}` as keyof GradeRecord; const currentVal = (gradeRecord as any)[fieldName];
-            const currentMetadata = gradeRecord.metadata?.[fieldName as string];
+         {/* GRADE TERMINAL MODAL */}
+         {isGradeTerminalOpen && gradeTerminalTarget && (<div className="fixed inset-0 z-[9500] flex flex-col bg-[#0f172a] animate-in zoom-in-95 duration-200"> <div className="h-16 bg-[#162431] border-b border-white/10 flex items-center justify-between px-3 md:px-6 shrink-0 shadow-2xl z-10 gap-2">
+            <div className="flex items-center gap-3 shrink-0"> <div className="w-9 h-9 bg-[#fbbf24] text-black flex items-center justify-center font-black text-base shadow-[0_0_20px_rgba(251,191,36,0.4)] md:w-10 md:h-10 md:text-lg"> <i className="fa-solid fa-pen-nib"></i> </div> <div className="hidden md:block"> <h2 className="text-[18px] font-black text-white uppercase tracking-tighter leading-none">{gradeTerminalTarget.className}</h2> <span className="text-[9px] font-bold text-[#fbbf24] uppercase tracking-widest mt-1 block truncate max-w-[200px]" title={gradeTerminalTarget.lessonName}>{gradeTerminalTarget.lessonName} NOT GİRİŞİ</span> </div> </div>
 
-            return (<div key={student.id} className={`bg-[#1e293b] border p-4 flex items-center justify-between shadow-lg group hover:bg-slate-800 transition-all ${currentVal ? 'border-[#fbbf24]/40' : 'border-white/5'}`}> <div className="flex items-center gap-4"> <div className={`w-10 h-10 flex items-center justify-center font-black text-sm border-2 rounded-full ${student.gender === Gender.FEMALE ? 'border-pink-500 text-pink-500 bg-pink-500/10' : 'border-blue-500 text-blue-500 bg-blue-500/10'}`}> {student.number} </div> <div> <span className="text-[13px] font-black text-white uppercase block">{student.name}</span> <div className="flex items-center gap-2 mt-1"> <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">ORT: {gradeRecord.average || '-'}</span>
+            {/* SEARCH BAR ADDED */}
+            <div className="flex-1 max-w-[140px] md:max-w-xs mx-2 relative min-w-0">
+               <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+               <input
+                  type="text"
+                  placeholder="ARA..."
+                  className="w-full h-8 md:h-9 bg-black/40 border border-white/10 pl-8 pr-2 text-[10px] font-bold text-white uppercase outline-none focus:border-[#fbbf24] transition-all rounded-sm"
+                  value={gradeSearchTerm}
+                  onChange={(e) => setGradeSearchTerm(e.target.value)}
+               />
+            </div>
 
-               {currentMetadata && currentMetadata.proofUrl && (
-                  <button
-                     onClick={() => setProofImageToView(currentMetadata.proofUrl || null)}
-                     className="w-6 h-6 flex items-center justify-center bg-[#3b82f6]/20 border border-[#3b82f6]/40 text-[#3b82f6] rounded-sm hover:bg-[#3b82f6] hover:text-white transition-all ml-2"
-                     title="Sınav Kağıdını Gör"
-                  >
-                     <i className="fa-solid fa-eye text-[10px]"></i>
-                  </button>
-               )}
-            </div> </div> </div> <GradeInput initialValue={currentVal} onCommit={(val) => handleUpdateGradeTerminal(gradeTerminalTarget.classId, student.id, gradeTerminalTarget.lessonId, fieldName, val)} colorClass={(currentVal || 0) < 50 ? 'text-red-500' : 'text-[#fbbf24]'} /> </div>);
-         })} </div> </div>
+            <div className="flex items-center gap-2 shrink-0"> <div className="flex bg-black/40 p-0.5 border border-white/10 rounded-sm"> <button onClick={() => setActiveSemester(1)} className={`px-2 py-1.5 text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${activeSemester === 1 ? 'bg-[#3b82f6] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>1.DÖN</button> <button onClick={() => setActiveSemester(2)} className={`px-2 py-1.5 text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${activeSemester === 2 ? 'bg-[#3b82f6] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}>2.DÖN</button> </div> <button onClick={() => setIsGradeTerminalOpen(false)} className="w-9 h-9 border border-white/10 text-white/40 hover:text-white transition-all ml-1"><i className="fa-solid fa-xmark text-lg"></i></button> </div> </div> <div className="flex bg-[#0a0a0a] border-b border-white/5 p-2 gap-2 overflow-x-auto no-scrollbar shrink-0"> {['exam1', 'exam2', 'exam3', 'exam4', 'oral'].map((col, idx) => { const label = col === 'oral' ? 'SZL' : `${idx + 1}. YZ`; const isActive = activeExamSlot === (col === 'oral' ? 5 : idx + 1); return (<button key={col} onClick={() => setActiveExamSlot(col === 'oral' ? 5 : idx + 1)} className={`flex-1 h-12 flex flex-col items-center justify-center border transition-all ${isActive ? 'bg-[#fbbf24]/10 border-[#fbbf24] text-[#fbbf24]' : 'bg-black border-white/10 text-slate-500 hover:bg-white/5'}`} > <span className="text-[10px] font-black uppercase">{label}</span> {isActive && <div className="w-1.5 h-1.5 bg-[#fbbf24] rounded-full mt-1 shadow-[0_0_10px_#fbbf24]"></div>} </button>); })} </div> <div className="flex-1 overflow-auto bg-grid-hatched p-4"> <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+
+               {/* STUDENT LIST FILTERED */}
+               {allClasses.find(c => c.id === gradeTerminalTarget.classId)?.students?.filter(s => s.name.toUpperCase().includes(gradeSearchTerm.toUpperCase()) || s.number.includes(gradeSearchTerm)).map(student => {
+                  const gradeRecord = student.grades?.find(g => g.lessonId === gradeTerminalTarget.lessonId) || { lessonId: gradeTerminalTarget.lessonId }; const fieldName = activeExamSlot === 5 ? (activeSemester === 1 ? 'oral1' : 'oral2') : `exam${(activeSemester === 1 ? 0 : 4) + activeExamSlot}` as keyof GradeRecord; const currentVal = (gradeRecord as any)[fieldName];
+                  const currentMetadata = gradeRecord.metadata?.[fieldName as string];
+
+                  return (<div key={student.id} className={`bg-[#1e293b] border p-2 flex items-center justify-between shadow-sm group hover:bg-slate-800 transition-all ${currentVal ? 'border-[#fbbf24]/40' : 'border-white/5'}`}> <div className="flex items-center gap-3 overflow-hidden">
+                     {/* COMPACT NUMBER - NO CIRCLE */}
+                     <div className="w-8 flex-shrink-0 text-right font-black text-[14px] text-slate-500 border-r border-white/10 pr-2 leading-none"> {student.number} </div>
+                     <div className="min-w-0"> <span className="text-[12px] font-bold text-white uppercase block truncate">{student.name}</span> <div className="flex items-center gap-2 mt-0.5"> <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest">ORT: {gradeRecord.average || '-'}</span>
+
+                        {currentMetadata && currentMetadata.proofUrl && (
+                           <button
+                              onClick={() => setProofImageToView(currentMetadata.proofUrl || null)}
+                              className="w-5 h-5 flex items-center justify-center bg-[#3b82f6]/20 border border-[#3b82f6]/40 text-[#3b82f6] rounded-sm hover:bg-[#3b82f6] hover:text-white transition-all ml-2"
+                              title="Sınav Kağıdını Gör"
+                           >
+                              <i className="fa-solid fa-eye text-[9px]"></i>
+                           </button>
+                        )}
+                     </div> </div> </div> <GradeInput initialValue={currentVal} onCommit={(val) => handleUpdateGradeTerminal(gradeTerminalTarget.classId, student.id, gradeTerminalTarget.lessonId, fieldName, val)} colorClass={(currentVal || 0) < 50 ? 'text-red-500' : 'text-[#fbbf24]'} /> </div>);
+               })} </div> </div>
             <div className="h-16 bg-[#162431] border-t border-white/10 flex items-center justify-end px-6 shrink-0">
                <div className="flex gap-3">
                   {/* CEVAP ANAHTARI BUTTON */}

@@ -97,7 +97,10 @@ export const standardizeBranchCode = (input: string): string => {
   if (s.includes('BILISIM') || s.includes('BILGISAYAR')) return 'BILI';
   if (s.includes('REHBER')) return 'REHB';
   if (s.includes('SAGLIK')) return 'SAVE';
-  if (s.includes('SECMELI')) return 'SECM';
+  if (s.includes('SECMELI')) {
+    const remainder = s.replace('SECMELI', '').trim();
+    return remainder.length >= 3 ? remainder.substring(0, 4) : 'SECM';
+  }
 
   return s.substring(0, 4);
 };

@@ -341,7 +341,7 @@ const SchedulingModule: React.FC<SchedulingModuleProps> = ({ teachers, classes, 
                                     <td key={`${d}-${h}`} className="border-r border-white/5 p-1 relative">
                                        {entry ? (
                                           <div className="h-full w-full flex flex-col items-center justify-center bg-[#1e293b] transition-all hover:bg-slate-800 shadow-lg border-l-[4px]" style={{ borderLeftColor: branchColor }}>
-                                             <span className="text-[11px] font-black text-white leading-none uppercase truncate w-full text-center px-1 tracking-tight">{displayLesson}</span>
+                                             <span className="text-[10px] font-bold text-white/80 leading-none uppercase truncate w-full text-center px-1 tracking-tight">{displayLesson}</span>
                                              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5 truncate w-full text-center px-1">{displayTeacher}</span>
                                           </div>
                                        ) : (<div className="h-full w-full opacity-5 border border-dashed border-white/10"></div>)}
