@@ -158,7 +158,22 @@ const CredentialsModule: React.FC<CredentialsModuleProps> = ({ onSuccess, school
                                 <td className="p-4 text-[11px] font-bold text-white">{user.name}</td>
                                 <td className="p-4 text-[11px] font-mono text-[#3b82f6]">{user.username || '-'}</td>
                                 <td className="p-4 text-[11px] font-mono text-[#fbbf24]">{user.password || '-'}</td>
-                                <td className="p-4 text-right">
+                                <td className="p-4 text-right flex items-center justify-end gap-2">
+                                    <button
+                                        onClick={() => {
+                                            if (!user.username || !user.password) {
+                                                alert("PAYLAŞIM İÇİN KULLANICI ADI VE ŞİFRE GEREKLİ");
+                                                return;
+                                            }
+                                            const url = `${window.location.origin}/?action=qrlimit&u=${user.username}&p=${user.password}&s=${schoolId}`;
+                                            const msg = `Merhaba ${user.name}, Senkron sistemine giriş bilgileriniz:\n\nKullanıcı Adı: ${user.username}\nŞifre: ${user.password}\n\nHızlı giriş için aşağıdaki linke tıklayabilirsiniz:\n${url}`;
+                                            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                                        }}
+                                        className="h-8 w-8 flex items-center justify-center bg-green-500/10 text-green-500 border border-green-500/30 rounded-full hover:bg-green-500 hover:text-white transition-all shadow-lg hover:scale-110"
+                                        title="WhatsApp ile Paylaş"
+                                    >
+                                        <i className="fa-brands fa-whatsapp text-sm"></i>
+                                    </button>
                                     <button onClick={() => handleOpenEdit(user)} className="h-8 px-4 bg-[#3b82f6]/10 text-[#3b82f6] border border-[#3b82f6]/30 rounded-sm text-[9px] font-black tracking-widest hover:bg-[#3b82f6] hover:text-white transition-all">
                                         DÜZENLE
                                     </button>
