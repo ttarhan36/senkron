@@ -146,6 +146,9 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    const [teacherToDelete, setTeacherToDelete] = useState<Teacher | null>(null);
    const [selectedContextTab, setSelectedContextTab] = useState<string | null>(null);
 
+   // DAILY ABSENCE REPORT STATE
+   const [isAbsenceReportModalOpen, setIsAbsenceReportModalOpen] = useState(false);
+
    // QR Code State
    const [isQRModalOpen, setIsQRModalOpen] = useState(false);
    const [qrData, setQrData] = useState<string>('');
@@ -394,6 +397,35 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
          lessonName: a.lesson?.name || ''
       }));
    }, [teacherAssignments]);
+
+   const dailyAbsenceReport = useMemo(() => {
+      const todayStr = new Date().toLocaleDateString('tr-TR');
+      const report: any[] = [];
+
+      allClasses.forEach(cls => {
+         // Check if this class has any lesson with current teacher
+         const hasTeacher = cls.assignments?.some(a => a.teacherId === teacher?.id);
+         if (!hasTeacher) return;
+
+         (cls.students || []).forEach(student => {
+            (student.attendanceHistory || []).forEach(record => {
+               if (record.date === todayStr && record.status === 'ABSENT' && record.teacherName === teacher?.name) {
+                  report.push({
+                     student,
+                     record,
+                     className: cls.name,
+                     lessonName: record.lessonName
+                  });
+               }
+            });
+         });
+      });
+
+      return report.sort((a, b) => {
+         if (a.record.period !== b.record.period) return a.record.period - b.record.period;
+         return a.className.localeCompare(b.className);
+      });
+   }, [allClasses, teacher]);
 
    // Auto-select first class in Students tab (defined here to access myCourseLoad)
    useEffect(() => {
@@ -1019,6 +1051,80 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
    return (
       <div className="bg-[#0f172a] h-full flex flex-col overflow-hidden relative">
+         {/* ABSENCE REPORT MODAL */}
+         {isAbsenceReportModalOpen && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+               <div className="bg-[#1e293b] border border-white/10 w-full max-w-4xl max-h-[90%] flex flex-col shadow-2xl rounded-sm animate-in zoom-in-95">
+                  <div className="flex justify-between items-center p-4 border-b border-white/10 bg-[#0f172a]">
+                     <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                           <i className="fa-solid fa-clipboard-user text-red-500 text-xl"></i>
+                        </div>
+                        <div>
+                           <h3 className="text-[14px] font-black text-white uppercase tracking-wider">GÜNLÜK YOKLAMA RAPORU</h3>
+                           <p className="text-[10px] font-bold text-slate-500 uppercase">{new Date().toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                     </div>
+                     <button onClick={() => setIsAbsenceReportModalOpen(false)} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-white transition-all bg-white/5 hover:bg-red-600 hover:border-red-500 border border-transparent rounded-sm">
+                        <i className="fa-solid fa-xmark"></i>
+                     </button>
+                  </div>
+
+                  <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
+                     {dailyAbsenceReport.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2">
+                           <div className="grid grid-cols-12 gap-2 pb-2 border-b border-white/10 text-[9px] font-black text-slate-500 uppercase tracking-widest px-2">
+                              <div className="col-span-1">DERS</div>
+                              <div className="col-span-2">SINIF</div>
+                              <div className="col-span-1">NO</div>
+                              <div className="col-span-4">AD SOYAD</div>
+                              <div className="col-span-4">DERS ADI</div>
+                           </div>
+                           {dailyAbsenceReport.map((item, idx) => (
+                              <div key={idx} className="grid grid-cols-12 gap-2 py-2 border-b border-white/5 items-center hover:bg-white/5 transition-all px-2 relative group">
+                                 <div className="col-span-1 flex justify-center">
+                                    <span className="w-6 h-6 flex items-center justify-center bg-black/40 border border-white/10 text-[10px] font-black text-white rounded-sm">{item.record.period}</span>
+                                 </div>
+                                 <div className="col-span-2">
+                                    <span className="text-[10px] font-black text-[#fbbf24] px-1.5 py-0.5 bg-[#fbbf24]/10 border border-[#fbbf24]/20 rounded-sm">{item.className}</span>
+                                 </div>
+                                 <div className="col-span-1">
+                                    <span className="text-[10px] font-bold text-slate-400 font-mono">{item.student.number}</span>
+                                 </div>
+                                 <div className="col-span-4">
+                                    <span className="text-[11px] font-bold text-white uppercase">{item.student.name}</span>
+                                 </div>
+                                 <div className="col-span-4 flex items-center gap-2">
+                                    <span className="text-[9px] font-black text-slate-500 uppercase bg-white/5 px-1.5 py-0.5 rounded-sm line-clamp-1">
+                                       {(() => {
+                                          const lObj = allLessons.find(l => l.id === item.record.lessonName || l.name === item.record.lessonName);
+                                          return standardizeBranchCode(lObj ? (lObj.name || item.record.lessonName) : item.record.lessonName);
+                                       })()}
+                                    </span>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     ) : (
+                        <div className="flex flex-col items-center justify-center py-20 opacity-30">
+                           <i className="fa-solid fa-check-circle text-6xl mb-4 text-green-500"></i>
+                           <span className="text-[12px] font-black uppercase tracking-[0.2em] text-white">BUGÜN DEVAMSIZ ÖĞRENCİ YOK</span>
+                        </div>
+                     )}
+                  </div>
+
+                  <div className="p-4 border-t border-white/10 bg-[#0f172a] flex justify-between items-center">
+                     <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                        TOPLAM: <span className="text-white font-black text-[11px]">{dailyAbsenceReport.length}</span> ÖĞRENCİ
+                     </div>
+                     <button onClick={() => window.print()} className="px-4 py-2 bg-[#3b82f6] text-white font-black text-[10px] uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center gap-2 rounded-sm border border-white/10">
+                        <i className="fa-solid fa-print"></i> YAZDIR
+                     </button>
+                  </div>
+               </div>
+            </div>
+         )}
+
          {/* ... (Header) ... */}
          {selectedTeacherId && teacher ? (
             <div className="flex flex-col h-full animate-in fade-in duration-200 overflow-hidden relative" onClick={() => { setActiveAssignActionId(null); setActiveExamMenuId(null); }}>
@@ -1145,6 +1251,13 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                     YÖNETİCİ GÖRÜNÜMÜ
                                  </div>
                               )}
+                              <button
+                                 onClick={() => setIsAbsenceReportModalOpen(true)}
+                                 className="px-3 py-1 bg-red-600/10 border border-red-500/30 text-red-500 hover:bg-red-600 hover:text-white transition-all rounded-sm text-[9px] font-black uppercase tracking-widest flex items-center gap-2"
+                              >
+                                 <i className="fa-solid fa-clipboard-list"></i>
+                                 GÜNLÜK YOKLAMA RAPORU ({dailyAbsenceReport.length})
+                              </button>
                            </div>
                         </div>
                         {dailyAgenda.length > 0 ? dailyAgenda.map((entry, idx) => {
