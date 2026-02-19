@@ -513,11 +513,28 @@ const App: React.FC = () => {
             students: (cls.students || []).map(st => {
               const heavyDetails = heavyDataMap[st.id];
               if (heavyDetails) {
+                // Merge Helper: Combines local changes (st) with DB data (heavyDetails), preventing overwrite of new entries
+                const mergeById = (local: any[], remote: any[]) => {
+                  const localMap = new Map(local.map(i => [i.id, i]));
+                  remote.forEach(r => {
+                    if (!localMap.has(r.id)) localMap.set(r.id, r);
+                  });
+                  return Array.from(localMap.values());
+                };
+
+                const mergeGrades = (local: any[], remote: any[]) => {
+                  const localMap = new Map(local.map(g => [g.lessonId, g]));
+                  remote.forEach(r => {
+                    if (!localMap.has(r.lessonId)) localMap.set(r.lessonId, r);
+                  });
+                  return Array.from(localMap.values());
+                };
+
                 return {
                   ...st,
-                  grades: heavyDetails.grades || [],
-                  attendanceHistory: heavyDetails.attendance_history || [],
-                  observations: heavyDetails.observations || []
+                  grades: mergeGrades(st.grades || [], heavyDetails.grades || []),
+                  attendanceHistory: mergeById(st.attendanceHistory || [], heavyDetails.attendance_history || []),
+                  observations: mergeById(st.observations || [], heavyDetails.observations || [])
                 };
               }
               return st;

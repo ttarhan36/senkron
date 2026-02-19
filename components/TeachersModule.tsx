@@ -400,30 +400,29 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
    const dailyAbsenceReport = useMemo(() => {
       const todayStr = new Date().toLocaleDateString('tr-TR');
-      const report: any[] = [];
+      const grouped: Record<string, { student: Student, className: string, records: AttendanceRecord[] }> = {};
 
       allClasses.forEach(cls => {
-         // Check if this class has any lesson with current teacher
          const hasTeacher = cls.assignments?.some(a => a.teacherId === teacher?.id);
          if (!hasTeacher) return;
 
          (cls.students || []).forEach(student => {
             (student.attendanceHistory || []).forEach(record => {
                if (record.date === todayStr && record.status === 'ABSENT' && record.teacherName === teacher?.name) {
-                  report.push({
-                     student,
-                     record,
-                     className: cls.name,
-                     lessonName: record.lessonName
-                  });
+                  if (!grouped[student.id]) {
+                     grouped[student.id] = { student, className: cls.name, records: [] };
+                  }
+                  grouped[student.id].records.push(record);
                }
             });
          });
       });
 
-      return report.sort((a, b) => {
-         if (a.record.period !== b.record.period) return a.record.period - b.record.period;
-         return a.className.localeCompare(b.className);
+      return Object.values(grouped).sort((a, b) => {
+         // Sort by Class Name, then Student Number
+         const classCompare = a.className.localeCompare(b.className);
+         if (classCompare !== 0) return classCompare;
+         return parseInt(a.student.number) - parseInt(b.student.number);
       });
    }, [allClasses, teacher]);
 
@@ -1074,16 +1073,22 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                      {dailyAbsenceReport.length > 0 ? (
                         <div className="grid grid-cols-1 gap-2">
                            <div className="grid grid-cols-12 gap-1 pb-2 border-b border-white/10 text-[9px] font-black text-slate-500 uppercase tracking-widest px-2">
-                              <div className="col-span-1 border-r border-white/5 text-center">DERS</div>
+                              <div className="col-span-2 border-r border-white/5 text-center">DERSLER</div>
                               <div className="col-span-2 border-r border-white/5 pl-2">SINIF</div>
                               <div className="col-span-1 border-r border-white/5 pl-2">NO</div>
-                              <div className="col-span-4 border-r border-white/5 pl-2">AD SOYAD</div>
+                              <div className="col-span-3 border-r border-white/5 pl-2">AD SOYAD</div>
                               <div className="col-span-4 pl-2">DERS ADI</div>
                            </div>
                            {dailyAbsenceReport.map((item, idx) => (
                               <div key={idx} className="grid grid-cols-12 gap-1 py-1 border-b border-white/5 items-center hover:bg-white/5 transition-all px-2 relative group">
-                                 <div className="col-span-1 flex justify-center">
-                                    <span className="w-5 h-5 flex items-center justify-center bg-black/40 border border-white/10 text-[9px] font-black text-white rounded-sm">{item.record.period}</span>
+                                 <div className="col-span-2 flex justify-center flex-wrap gap-1">
+                                    {item.records
+                                       .sort((a, b) => a.period - b.period)
+                                       .map((rec, rIdx) => (
+                                          <span key={rIdx} className="w-5 h-5 flex items-center justify-center bg-black/40 border border-white/10 text-[9px] font-black text-white rounded-sm">
+                                             {rec.period}
+                                          </span>
+                                       ))}
                                  </div>
                                  <div className="col-span-2 flex items-center">
                                     <span className="text-[9px] font-black text-[#fbbf24] px-1 py-0 bg-[#fbbf24]/10 border border-[#fbbf24]/20 rounded-sm">{item.className}</span>
@@ -1091,16 +1096,21 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                  <div className="col-span-1 flex items-center">
                                     <span className="text-[9px] font-bold text-slate-400 font-mono">{item.student.number}</span>
                                  </div>
-                                 <div className="col-span-4 flex items-center overflow-hidden">
+                                 <div className="col-span-3 flex items-center overflow-hidden">
                                     <span className="text-[10px] font-bold text-white uppercase truncate whitespace-nowrap" title={item.student.name}>{item.student.name}</span>
                                  </div>
-                                 <div className="col-span-4 flex items-center gap-2 overflow-hidden">
-                                    <span className="text-[8px] font-black text-slate-500 uppercase bg-white/5 px-1 py-0 rounded-sm truncate">
-                                       {(() => {
-                                          const lObj = allLessons.find(l => l.id === item.record.lessonName || l.name === item.record.lessonName);
-                                          return standardizeBranchCode(lObj ? (lObj.name || item.record.lessonName) : item.record.lessonName);
-                                       })()}
-                                    </span>
+                                 <div className="col-span-4 flex items-center gap-1 overflow-hidden flex-wrap">
+                                    {item.records
+                                       .sort((a, b) => a.period - b.period)
+                                       .map((rec, rIdx) => {
+                                          const lObj = allLessons.find(l => l.id === rec.lessonName || l.name === rec.lessonName);
+                                          const displayName = standardizeBranchCode(lObj ? (lObj.name || rec.lessonName) : rec.lessonName);
+                                          return (
+                                             <span key={rIdx} className="text-[8px] font-black text-white uppercase bg-black/80 border border-white/20 px-2 py-0.5 rounded-sm shadow-sm truncate">
+                                                {displayName}
+                                             </span>
+                                          );
+                                       })}
                                  </div>
                               </div>
                            ))}
