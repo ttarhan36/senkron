@@ -151,6 +151,107 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
    const [qrData, setQrData] = useState<string>('');
    const [qrTeacherName, setQrTeacherName] = useState<string>('');
 
+   const handleAddObservation = async () => {
+      if (!viewingStudentAttendance || !observationText.trim()) return;
+      setIsSavingObservation(true);
+      try {
+         const newObservation = {
+            id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(),
+            teacherName: teachers.find(t => t.id === currentUserId)?.name || 'ÖĞRETMEN',
+            content: observationText.trim(),
+            date: new Date().toLocaleDateString('tr-TR'),
+            timestamp: Date.now()
+         };
+
+         const currentObservations = viewingStudentAttendance.observations || [];
+         const updatedObservations = [newObservation, ...currentObservations];
+
+         const { error } = await supabase.from('students').update({
+            observations: updatedObservations
+         }).eq('id', viewingStudentAttendance.id);
+
+         if (error) throw error;
+
+         // Update local state
+         const updatedStudent = { ...viewingStudentAttendance, observations: updatedObservations };
+         setViewingStudentAttendance(updatedStudent);
+
+         // Update classes state
+         setClasses(prev => prev.map(c => {
+            if (c.students?.some(s => s.id === updatedStudent.id)) {
+               return {
+                  ...c,
+                  students: c.students?.map(s => s.id === updatedStudent.id ? updatedStudent : s)
+               };
+            }
+            return c;
+         }));
+
+         setObservationText('');
+         onSuccess('Gözlem notu eklendi');
+      } catch (error: any) {
+         console.error('Observation save error:', error);
+         onSuccess('Hata: ' + error.message);
+      } finally {
+         setIsSavingObservation(false);
+      }
+   };
+
+   const renderStudentObservations = () => {
+      if (!viewingStudentAttendance) return null;
+      const obsList = viewingStudentAttendance.observations || [];
+
+      return (
+         <div className="space-y-4 animate-in slide-in-from-bottom-2">
+            <div className="bg-[#1e293b]/60 border border-white/5 p-4 rounded-sm">
+               <span className="text-[10px] font-black text-[#a855f7] uppercase tracking-[0.4em] block mb-3">YENİ KANAAT / GÖZLEM EKLE</span>
+               <div className="space-y-3">
+                  <textarea
+                     className="w-full bg-black/40 border border-white/10 p-3 text-[11px] font-bold text-white outline-none focus:border-[#a855f7] transition-all min-h-[80px] resize-none rounded-sm"
+                     placeholder="Öğrenci hakkında gözlem veya kanaat notunuzu buraya yazın..."
+                     value={observationText}
+                     onChange={(e) => setObservationText(e.target.value)}
+                  />
+                  <div className="flex justify-end">
+                     <button
+                        onClick={handleAddObservation}
+                        disabled={isSavingObservation || !observationText.trim()}
+                        className={`px-6 h-9 bg-[#a855f7] text-white font-black text-[10px] uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-95 transition-all border border-white/10 ${isSavingObservation || !observationText.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                     >
+                        {isSavingObservation ? 'KAYDEDİLİYOR...' : 'KAYDET'}
+                     </button>
+                  </div>
+               </div>
+            </div>
+
+            <div className="space-y-3">
+               <div className="flex items-center gap-2 mb-2">
+                  <i className="fa-solid fa-history text-slate-500 text-xs"></i>
+                  <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">GEÇMİŞ GÖZLEMLER ({obsList.length})</span>
+               </div>
+
+               {obsList.length > 0 ? (
+                  obsList.map(obs => (
+                     <div key={obs.id} className="bg-black/20 border border-white/5 p-3 rounded-sm relative group hover:bg-black/40 transition-all">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#a855f7]/50"></div>
+                        <p className="text-[11px] font-medium text-white/90 pl-2 leading-relaxed italic">"{obs.content}"</p>
+                        <div className="flex justify-between items-center mt-2 pl-2 border-t border-white/5 pt-2">
+                           <span className="text-[9px] font-black text-[#a855f7] uppercase tracking-wider">{obs.teacherName}</span>
+                           <span className="text-[8px] font-bold text-slate-600 uppercase">{obs.date}</span>
+                        </div>
+                     </div>
+                  ))
+               ) : (
+                  <div className="py-12 text-center opacity-30 border border-dashed border-white/5">
+                     <i className="fa-solid fa-comment-slash text-2xl mb-2 text-slate-600"></i>
+                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">HENÜZ GÖZLEM BULUNMUYOR</p>
+                  </div>
+               )}
+            </div>
+         </div>
+      );
+   };
+
    useEffect(() => {
       if (userRole === UserRole.TEACHER && currentUserId) {
          setSelectedTeacherId(currentUserId);
@@ -1780,6 +1881,43 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                <img src={proofImageToView} className="max-w-full max-h-full border-2 border-[#fbbf24] shadow-[0_0_50px_rgba(251,191,36,0.2)] rounded-sm" />
                <div className="absolute top-4 right-4 bg-[#fbbf24] px-4 py-2 text-black font-black text-[12px] uppercase tracking-widest rounded-sm">SINAV KAĞIDI KANITI</div>
                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 bg-black/80 px-6 py-3 rounded-full text-white font-bold uppercase tracking-widest border border-white/20">KAPATMAK İÇİN TIKLAYIN</div>
+            </div>
+         )}
+
+         {/* STUDENT DETAILS MODAL */}
+         {viewingStudentAttendance && (
+            <div className="fixed inset-0 z-[9000] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
+               {/* Modal Content */}
+               <div className="bg-[#0d141b] border-2 border-[#3b82f6] w-full max-w-lg shadow-[0_0_100px_rgba(0,0,0,1)] flex flex-col animate-in zoom-in-95 duration-200 h-[85vh] rounded-sm overflow-hidden">
+
+                  {/* HEADER */}
+                  <div className="p-5 border-b border-white/10 flex justify-between items-center bg-[#162431] shrink-0">
+                     <div>
+                        <h3 className="text-[16px] font-black text-white uppercase tracking-widest">{viewingStudentAttendance.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{viewingStudentAttendance.number}</span>
+                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-sm ${viewingStudentAttendance.gender === Gender.FEMALE ? 'bg-pink-500/20 text-pink-500' : 'bg-blue-500/20 text-blue-500'}`}>
+                              {viewingStudentAttendance.gender === Gender.FEMALE ? 'KIZ ÖĞRENCİ' : 'ERKEK ÖĞRENCİ'}
+                           </span>
+                        </div>
+                     </div>
+                     <button onClick={() => setViewingStudentAttendance(null)} className="w-10 h-10 border border-white/10 text-white/40 hover:text-white transition-all bg-black/20 flex items-center justify-center rounded-sm"><i className="fa-solid fa-xmark text-lg"></i></button>
+                  </div>
+
+                  {/* TABS */}
+                  <div className="flex border-b border-white/10 shrink-0">
+                     <button onClick={() => setStudentModalTab('ATTENDANCE')} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${studentModalTab === 'ATTENDANCE' ? 'border-[#3b82f6] text-white bg-[#3b82f6]/10' : 'border-transparent text-slate-500 hover:text-white hover:bg-white/5'}`}>DEVAMSIZLIK</button>
+                     <button onClick={() => setStudentModalTab('GRADES')} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${studentModalTab === 'GRADES' ? 'border-[#3b82f6] text-white bg-[#3b82f6]/10' : 'border-transparent text-slate-500 hover:text-white hover:bg-white/5'}`}>NOTLAR</button>
+                     <button onClick={() => setStudentModalTab('OBSERVATIONS')} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${studentModalTab === 'OBSERVATIONS' ? 'border-[#a855f7] text-white bg-[#a855f7]/10' : 'border-transparent text-slate-500 hover:text-white hover:bg-white/5'}`}>KANAAT & GÖZLEM</button>
+                  </div>
+
+                  {/* CONTENT */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-5 relative bg-grid-hatched">
+                     {studentModalTab === 'ATTENDANCE' && renderStudentAttendanceCalendar()}
+                     {studentModalTab === 'GRADES' && renderStudentGrades()}
+                     {studentModalTab === 'OBSERVATIONS' && renderStudentObservations()}
+                  </div>
+               </div>
             </div>
          )}
 
