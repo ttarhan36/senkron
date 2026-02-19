@@ -929,16 +929,16 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                            <div className="flex justify-between items-center mt-3"><span className="text-[7px] font-black text-slate-600 uppercase tracking-widest">VERİMLİLİK_ANALİZİ</span><span className={`text-[10px] font-black uppercase ${(teacher.lessonCount > 0 ? (totalHours / teacher.lessonCount) * 100 : 0) > 100 ? 'text-red-500' : 'text-[#3b82f6]'}`}>%{Math.round(teacher.lessonCount > 0 ? (totalHours / teacher.lessonCount) * 100 : 0)}</span></div>
                         </div>
 
-                        {isAdmin && (
+                        {(isAdmin || userRole === UserRole.TEACHER) && (
                            <div className="bg-[#1e293b]/80 border border-white/5 p-4 shadow-lg relative overflow-hidden rounded-sm group hover:border-[#3b82f6]/40 transition-all">
                               <div className="flex items-center justify-between mb-4">
                                  <div className="flex items-center gap-2"><i className="fa-solid fa-key text-[#3b82f6] text-xs"></i><span className="text-[9px] font-black text-white/90 uppercase tracking-widest">HESAP_KİMLİK_BİLGİLERİ</span></div>
-                                 {canEditCredentials && <span className="text-[7px] font-bold text-green-500 uppercase tracking-widest animate-pulse">DÜZENLEME AKTİF</span>}
+                                 {(canEditCredentials || userRole === UserRole.TEACHER) && <span className="text-[7px] font-bold text-green-500 uppercase tracking-widest animate-pulse">DÜZENLEME AKTİF</span>}
                               </div>
                               <div className="space-y-3">
                                  <div className="flex flex-col gap-1">
                                     <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">KULLANICI ADI</span>
-                                    {canEditCredentials ? (
+                                    {(canEditCredentials || userRole === UserRole.TEACHER) ? (
                                        <input
                                           className="bg-black border border-white/10 p-2 text-[11px] font-black text-white outline-none focus:border-[#3b82f6] transition-all"
                                           value={credentials.username}
@@ -951,7 +951,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
 
                                  <div className="flex flex-col gap-1">
                                     <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">ŞİFRE</span>
-                                    {canEditCredentials ? (
+                                    {(canEditCredentials || userRole === UserRole.TEACHER) ? (
                                        <input
                                           type="text"
                                           className="bg-black border border-white/10 p-2 text-[11px] font-black text-[#fbbf24] outline-none focus:border-[#fbbf24] transition-all"
@@ -964,7 +964,7 @@ const TeachersModule: React.FC<TeachersModuleProps> = ({
                                  </div>
 
                                  <div className="flex gap-2 mt-2">
-                                    {canEditCredentials && (
+                                    {(canEditCredentials || userRole === UserRole.TEACHER) && (
                                        <button onClick={handleUpdateSelfCredentials} className="flex-1 h-10 bg-[#3b82f6] text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">GÜNCELLE</button>
                                     )}
                                     <button onClick={() => handleGenerateQR(teacher)} className="h-10 px-4 bg-white text-black font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2" title="Hızlı Giriş QR Kodu">
