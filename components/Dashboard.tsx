@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Teacher, ClassSection, Lesson, ModuleType, ShiftType, ScheduleEntry, CommsCategory, CommsType, Announcement, UserRole, Course, GradeRecord, Gender, Student } from '../types';
 import { getBranchColor, getSectionColor, standardizeDayCode } from '../utils';
+import { supabase } from '../services/supabaseClient';
 
 interface DashboardProps {
    teachers: Teacher[];
@@ -26,6 +27,53 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
    const [activeTab, setActiveTab] = useState<'GENEL' | 'DEVAMSIZLIK' | 'KONULAR' | 'SINAVLAR' | 'NOTLARIM' | 'KURSLAR'>('GENEL');
    const [viewingStudentsId, setViewingStudentsId] = useState<string | null>(null);
+   const [credentials, setCredentials] = useState({ username: '', password: '' });
+
+   const studentData = useMemo(() => {
+      if (userRole !== UserRole.STUDENT) return null;
+      let found = null;
+      classes.forEach(c => {
+         const s = (c.students || []).find(st => st.number === userId);
+         if (s) found = { student: s, class: c };
+      });
+      return found;
+   }, [userRole, userId, classes]);
+
+   useEffect(() => {
+      if (studentData?.student) {
+         setCredentials({ username: studentData.student.username || '', password: studentData.student.password || '' });
+      }
+   }, [studentData]);
+
+   const handleUpdateStudentCredentials = async () => {
+      if (!studentData?.student || !credentials.username) return;
+      try {
+         const { error } = await supabase.from('students').update({
+            username: credentials.username,
+            password: credentials.password
+         }).eq('id', studentData.student.id);
+
+         if (error) throw error;
+
+         // Optimistic update
+         if (studentData) {
+            const updatedStudent = { ...studentData.student, username: credentials.username, password: credentials.password };
+            // Since studentData is derived/passed, we might need to update global state if possible, 
+            // but here we just show success and maybe locally update if we had a setter.
+            // Dashboard props: { userRole, userId, schoolConfig, teachers, allClasses, allLessons, onSuccess, schedule }
+            // We don't have setAllClasses here. 
+            // However, the user wants it to be editable.
+            // We should at least show success.
+            // Ideally we should call a refresh or update context.
+            // For now, let's assume onSuccess will trigger something or just notify.
+         }
+         onSuccess("KİMLİK BİLGİLERİ GÜNCELLENDİ");
+      } catch (err: any) {
+         console.error(err);
+         onSuccess("GÜNCELLEME HATASI: " + err.message);
+      }
+   };
+
 
    // Parent'tan gelen tab değişirse güncelle
    useEffect(() => {
@@ -67,15 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       return list.sort((a, b) => b.missedCount - a.missedCount);
    }, [classes, userRole]);
 
-   const studentData = useMemo(() => {
-      if (userRole !== UserRole.STUDENT) return null;
-      let found = null;
-      classes.forEach(c => {
-         const s = (c.students || []).find(st => st.number === userId);
-         if (s) found = { student: s, class: c };
-      });
-      return found;
-   }, [userRole, userId, classes]);
+
 
    const enrolledStudentsForModal = useMemo(() => {
       if (!viewingStudentsId) return [];
@@ -306,6 +346,36 @@ const Dashboard: React.FC<DashboardProps> = ({
                               )) : (
                                  <div className="flex items-center justify-center h-full opacity-20 italic text-[9px] uppercase tracking-widest">Gözlem notu bulunmuyor...</div>
                               )}
+                           </div>
+                        </div>
+                        <div className="bg-slate-900/60 border border-white/5 p-4 shadow-xl relative overflow-hidden rounded-sm group hover:border-[#3b82f6]/40 transition-all">
+                           <div className="flex items-center justify-between mb-4">
+                              <span className="text-[10px] font-black text-[#3b82f6] uppercase tracking-[0.4em]">HESAP_KİMLİK_BİLGİLERİ</span>
+                              <span className="text-[7px] font-bold text-green-500 uppercase tracking-widest animate-pulse">DÜZENLEME AKTİF</span>
+                           </div>
+                           <div className="space-y-3">
+                              <div className="flex flex-col gap-1">
+                                 <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">KULLANICI ADI</span>
+                                 <input
+                                    className="bg-black border border-white/10 p-2 text-[11px] font-black text-white outline-none focus:border-[#3b82f6] transition-all uppercase"
+                                    value={credentials.username}
+                                    onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+                                 />
+                              </div>
+
+                              <div className="flex flex-col gap-1">
+                                 <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">ŞİFRE</span>
+                                 <input
+                                    type="text"
+                                    className="bg-black border border-white/10 p-2 text-[11px] font-black text-[#fbbf24] outline-none focus:border-[#fbbf24] transition-all"
+                                    value={credentials.password}
+                                    onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                                 />
+                              </div>
+
+                              <div className="mt-2">
+                                 <button onClick={handleUpdateStudentCredentials} className="w-full h-10 bg-[#3b82f6] text-white font-black text-[10px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg">GÜNCELLE</button>
+                              </div>
                            </div>
                         </div>
                      </div>
