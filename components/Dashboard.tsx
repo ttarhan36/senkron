@@ -258,24 +258,24 @@ const Dashboard: React.FC<DashboardProps> = ({
       const { student, class: studentClass } = studentData;
 
       return (
-         <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-500 overflow-hidden pb-20">
-            <div className="bg-[#0f172a] border-2 border-[#3b82f6]/40 p-5 rounded-sm shadow-2xl relative overflow-hidden flex items-center justify-between bg-grid-hatched shrink-0">
-               <div className="flex items-center gap-6">
-                  <div className="w-16 h-16 bg-black border-2 border-white/10 rounded-full flex items-center justify-center shadow-inner group overflow-hidden relative">
-                     <i className="fa-solid fa-user text-3xl text-slate-800"></i>
-                     <div className={`absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2 border-[#0f172a] shadow-[0_0_8px_currentColor] ${student.gender === Gender.FEMALE ? 'bg-pink-500 text-pink-500 shadow-[0_0_8px_#ec4899]' : 'bg-slate-500 text-slate-500'}`}></div>
+         <div className="h-full animate-in fade-in duration-500 overflow-y-auto no-scrollbar pb-24 p-1 md:p-2">
+            <div className="bg-[#0f172a] border-2 border-[#3b82f6]/40 p-3 rounded-sm shadow-2xl relative overflow-hidden flex items-center justify-between bg-grid-hatched shrink-0 mb-3">
+               <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-black border-2 border-white/10 rounded-full flex items-center justify-center shadow-inner group overflow-hidden relative">
+                     <i className="fa-solid fa-user text-2xl text-slate-800"></i>
+                     <div className={`absolute top-1 right-1 w-2 h-2 rounded-full border-2 border-[#0f172a] shadow-[0_0_8px_currentColor] ${student.gender === Gender.FEMALE ? 'bg-pink-500 text-pink-500 shadow-[0_0_8px_#ec4899]' : 'bg-slate-500 text-slate-500'}`}></div>
                   </div>
-                  <div className="flex flex-col min-w-0 pr-4">
-                     <h2 className="text-[18px] md:text-[20px] font-black text-white uppercase tracking-widest leading-none truncate" title={student.name}>{student.name}</h2>
-                     <div className="flex items-center gap-3 mt-3">
-                        <span className="px-2 py-0.5 bg-[#fbbf24]/10 border border-[#fbbf24]/20 text-[#fbbf24] text-[9px] font-black uppercase tracking-widest">NO: {student.number}</span>
-                        <span className="text-[9px] font-black text-[#3b82f6] uppercase tracking-[0.2em]">{studentClass.name} ŞUBESİ</span>
+                  <div className="flex flex-col min-w-0 pr-2">
+                     <h2 className="text-[15px] font-black text-white uppercase tracking-widest leading-none truncate" title={student.name}>{student.name}</h2>
+                     <div className="flex items-center gap-3 mt-1.5">
+                        <span className="px-2 py-0.5 bg-[#fbbf24]/10 border border-[#fbbf24]/20 text-[#fbbf24] text-[8px] font-black uppercase tracking-widest">NO: {student.number}</span>
+                        <span className="text-[8px] font-black text-[#3b82f6] uppercase tracking-[0.2em]">{studentClass.name} ŞUBESİ</span>
                      </div>
                   </div>
                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar bg-[#080c10] border border-white/5 rounded-sm relative bg-grid-hatched p-4">
+            <div className="bg-[#080c10] border border-white/5 rounded-sm relative bg-grid-hatched p-3 min-h-[500px]">
                {activeTab === 'GENEL' && (
                   <div className="space-y-4 animate-in slide-in-from-bottom-2 pb-12">
                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -473,30 +473,30 @@ const Dashboard: React.FC<DashboardProps> = ({
                         const lesson = lessons.find(l => l.id === assign.lessonId);
                         const grade = student.grades?.find(g => g.lessonId === assign.lessonId) || { lessonId: assign.lessonId };
                         return (
-                           <div key={assign.lessonId} className="bg-[#1e293b] border border-white/5 p-3 flex flex-col gap-2 relative overflow-hidden group hover:bg-[#253447] transition-all">
+                           <div key={assign.lessonId} className="bg-[#1e293b] border border-white/5 p-2 flex flex-col gap-1 relative overflow-hidden group hover:bg-[#253447] transition-all">
                               <div className="absolute left-0 top-1 bottom-1 w-1" style={{ backgroundColor: getBranchColor(lesson?.branch || '') }}></div>
-                              <div className="flex justify-between items-center pl-1.5">
-                                 <span className="text-[13px] font-black text-white uppercase truncate">{lesson?.name}</span>
+                              <div className="flex justify-between items-center pl-1.5 h-6">
+                                 <span className="text-[12px] font-bold text-white uppercase truncate">{lesson?.name}</span>
                                  <span className={`text-[14px] font-black ${(grade.average || 0) < 50 ? 'text-red-500' : 'text-[#fbbf24]'}`}>{grade.average || '--'}</span>
                               </div>
-                              <div className="grid grid-cols-2 gap-2 pl-1.5">
-                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[6px] font-black text-[#3b82f6] uppercase tracking-widest opacity-60">I. DÖNEM</span>
-                                    <div className="flex gap-1">
+                              <div className="grid grid-cols-2 gap-1.5 pl-1.5">
+                                 <div className="flex flex-col gap-0.5">
+                                    <span className="text-[5px] font-black text-[#3b82f6] uppercase tracking-widest opacity-60">I. DÖNEM</span>
+                                    <div className="flex gap-0.5">
                                        {[grade.exam1, grade.exam2, grade.exam3, grade.exam4, grade.oral1].map((val, i) => (
-                                          <div key={i} className="flex-1 h-7 border border-white/5 bg-black/20 flex flex-col items-center justify-center">
-                                             <span className="text-[9px] font-black text-white">{val || '-'}</span>
+                                          <div key={i} className="flex-1 h-6 border border-white/5 bg-black/20 flex flex-col items-center justify-center">
+                                             <span className="text-[8px] font-black text-white">{val || '-'}</span>
                                              <span className="text-[4px] font-bold text-slate-700 uppercase">{i === 4 ? 'SZ' : (i + 1) + ' s'}</span>
                                           </div>
                                        ))}
                                     </div>
                                  </div>
-                                 <div className="flex flex-col gap-1 border-l border-white/5 pl-2">
-                                    <span className="text-[6px] font-black text-[#fbbf24] uppercase tracking-widest opacity-60">II. DÖNEM</span>
-                                    <div className="flex gap-1">
+                                 <div className="flex flex-col gap-0.5 border-l border-white/5 pl-1.5">
+                                    <span className="text-[5px] font-black text-[#fbbf24] uppercase tracking-widest opacity-60">II. DÖNEM</span>
+                                    <div className="flex gap-0.5">
                                        {[grade.exam5, grade.exam6, grade.exam7, grade.exam8, grade.oral2].map((val, i) => (
-                                          <div key={i} className="flex-1 h-7 border border-white/5 bg-black/20 flex flex-col items-center justify-center">
-                                             <span className="text-[9px] font-black text-white">{val || '-'}</span>
+                                          <div key={i} className="flex-1 h-6 border border-white/5 bg-black/20 flex flex-col items-center justify-center">
+                                             <span className="text-[8px] font-black text-white">{val || '-'}</span>
                                              <span className="text-[4px] font-bold text-slate-700 uppercase">{i === 4 ? 'SZ' : (i + 1) + ' s'}</span>
                                           </div>
                                        ))}
