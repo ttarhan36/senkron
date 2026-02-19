@@ -354,23 +354,25 @@ const Dashboard: React.FC<DashboardProps> = ({
                               <span className="text-[7px] font-bold text-green-500 uppercase tracking-widest animate-pulse">DÜZENLEME AKTİF</span>
                            </div>
                            <div className="space-y-3">
-                              <div className="flex flex-col gap-1">
-                                 <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">KULLANICI ADI</span>
-                                 <input
-                                    className="bg-black border border-white/10 p-2 text-[11px] font-black text-white outline-none focus:border-[#3b82f6] transition-all uppercase"
-                                    value={credentials.username}
-                                    onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-                                 />
-                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                 <div className="flex flex-col gap-1">
+                                    <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">KULLANICI ADI</span>
+                                    <input
+                                       className="bg-black border border-white/10 p-2 text-[11px] font-black text-white outline-none focus:border-[#3b82f6] transition-all uppercase"
+                                       value={credentials.username}
+                                       onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+                                    />
+                                 </div>
 
-                              <div className="flex flex-col gap-1">
-                                 <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">ŞİFRE</span>
-                                 <input
-                                    type="text"
-                                    className="bg-black border border-white/10 p-2 text-[11px] font-black text-[#fbbf24] outline-none focus:border-[#fbbf24] transition-all"
-                                    value={credentials.password}
-                                    onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                                 />
+                                 <div className="flex flex-col gap-1">
+                                    <span className="text-[8px] font-bold text-slate-500 uppercase ml-1">ŞİFRE</span>
+                                    <input
+                                       type="text"
+                                       className="bg-black border border-white/10 p-2 text-[11px] font-black text-[#fbbf24] outline-none focus:border-[#fbbf24] transition-all"
+                                       value={credentials.password}
+                                       onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                                    />
+                                 </div>
                               </div>
 
                               <div className="mt-2">
