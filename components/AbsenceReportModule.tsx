@@ -137,11 +137,12 @@ const AbsenceReportModule: React.FC<AbsenceReportModuleProps> = ({ classes, allL
                                                 <div className="flex flex-wrap gap-1">
                                                     {item.records.map((rec, rIdx) => {
                                                         const lessonObj = allLessons.find(l => l.id === rec.lessonName || l.name === rec.lessonName);
-                                                        const standardizedName = standardizeBranchCode(lessonObj ? (lessonObj.name || rec.lessonName) : rec.lessonName);
+                                                        const resolvedName = lessonObj ? (lessonObj.name || rec.lessonName) : rec.lessonName;
+                                                        const branchCode = standardizeBranchCode(resolvedName);
                                                         return (
-                                                            <div key={rIdx} className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-[2px]" title={`${rec.lessonName} - ${rec.period}. Ders`}>
+                                                            <div key={rIdx} className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-[2px]" title={`${resolvedName} - ${rec.period}. Ders`}>
                                                                 <span className="text-[8px] font-black text-red-500">{rec.period}</span>
-                                                                <span className="text-[8px] font-bold text-slate-400 uppercase">{standardizedName}</span>
+                                                                <span className="text-[8px] font-bold text-slate-400 uppercase">{resolvedName}</span>
                                                             </div>
                                                         );
                                                     })}

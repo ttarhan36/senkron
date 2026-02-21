@@ -107,8 +107,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             );
 
             if (todaysRecords.length > 0) {
-               // Tekrar eden ders isimlerini temizle
-               const uniqueLessons = Array.from(new Set(todaysRecords.map(r => r.lessonName))) as string[];
+               // Resolve lesson names if they are IDs
+               const uniqueLessons = Array.from(new Set(todaysRecords.map(r => lessons.find(l => l.id === r.lessonName)?.name || r.lessonName))) as string[];
 
                list.push({
                   student: student,
@@ -522,9 +522,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                               <div className="w-full grid grid-cols-1 gap-1 z-10 px-4 py-4">
                                  {studentMissedLessonsSummary.map(([lesson, count]) => (
                                     <div key={lesson} className="h-10 bg-[#1e293b] border border-white/5 px-3 flex items-center justify-between hover:bg-slate-800 transition-all rounded-sm">
-                                       <div className="flex items-center gap-3 overflow-hidden">
+                                       <div className="flex items-center gap-3 overflow-hidden min-w-0 flex-1">
                                           <div className="w-1 h-5 shrink-0" style={{ backgroundColor: getBranchColor(lesson) }}></div>
-                                          <span className="text-[11px] font-bold text-white/90 uppercase truncate">{lesson}</span>
+                                          <span className="text-[11px] font-medium text-white/80 uppercase truncate">{lesson}</span>
                                        </div>
                                        <span className="text-[12px] font-black text-red-500 shrink-0">{count} DERS</span>
                                     </div>
@@ -651,7 +651,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                            <div key={assign.lessonId} className="bg-[#1e293b] border border-white/5 p-2 flex flex-col gap-1 relative overflow-hidden group hover:bg-[#253447] transition-all">
                               <div className="absolute left-0 top-1 bottom-1 w-1" style={{ backgroundColor: getBranchColor(lesson?.branch || '') }}></div>
                               <div className="flex justify-between items-center pl-1.5 h-6">
-                                 <span className="text-[12px] font-bold text-white/90 uppercase truncate">{lesson?.name}</span>
+                                 <span className="text-[12px] font-medium text-white/80 uppercase truncate">{lesson?.name}</span>
                                  <span className={`text-[14px] font-black ${(grade.average || 0) < 50 ? 'text-red-500' : 'text-[#fbbf24]'}`}>{grade.average || '--'}</span>
                               </div>
                               <div className="grid grid-cols-2 gap-1.5 pl-1.5">
@@ -765,7 +765,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                                  <div className={`w-6 h-6 rounded-full border border-white/5 flex items-center justify-center ${st.gender === Gender.FEMALE ? 'text-pink-500' : 'text-[#3b82f6]'}`}>
                                     <i className={`fa-solid ${st.gender === Gender.FEMALE ? 'fa-venus' : 'fa-mars'} text-[8px]`}></i>
                                  </div>
-                                 <span className="text-[11px] font-bold text-white uppercase">{st.name}</span>
+                                 <span className="text-[9px] font-medium text-white/80 uppercase">{st.name}</span>
                               </div>
                               <span className="text-[8px] font-black text-[#fbbf24] bg-[#fbbf24]/5 px-2 py-0.5 border border-[#fbbf24]/10">{className}</span>
                            </div>
@@ -857,7 +857,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <div className="flex items-center gap-3">
                            <div className="w-1 h-8 bg-red-600"></div>
                            <div className="flex flex-col">
-                              <span className="text-[11px] font-black text-white uppercase">{item.student.name}</span>
+                              <span className="text-[9px] font-medium text-white/80 uppercase">{item.student.name}</span>
                               <div className="flex items-center gap-2">
                                  <span className="text-[8px] font-bold text-[#fbbf24] bg-[#fbbf24]/10 px-1 border border-[#fbbf24]/20">{item.className}</span>
                                  <span className="text-[7px] font-medium text-slate-500 truncate max-w-[100px]">{item.lessons.slice(0, 2).join(', ')}{item.lessons.length > 2 ? '...' : ''}</span>

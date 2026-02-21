@@ -301,28 +301,25 @@ const SchedulingModule: React.FC<SchedulingModuleProps> = ({ teachers, classes, 
                               <td className="text-center text-[12px] font-black text-slate-500 border-r border-white/5 bg-black/20">{h}</td>
                               {DAYS_SHORT.map(d => {
                                  const entry = appliedSchedule.find(s => s.sinif === selectedClass && s.ders_saati === h && s.gun.toUpperCase().startsWith(d));
-
-                                 // Veri Çözümleme (DNA Eşleşmesi)
+                                 const lessonObj = entry ? lessons.find(l => l.id === entry.ders || l.name === entry.ders) : null;
                                  let displayLesson = entry?.ders || '';
+                                 let displayBranchShort = entry?.ders || '';
                                  let displayTeacher = entry?.ogretmen || '';
-                                 let branchColor = '#3b82f6'; // Varsayılan mavi
+                                 let branchColor = '#3b82f6';
 
                                  if (entry) {
-                                    // 1. Ders Bilgisi Çözümleme
-                                    const lessonObj = lessons.find(l => l.name === entry.ders || l.id === entry.ders || l.branch === entry.ders);
                                     if (lessonObj) {
-                                       displayLesson = standardizeBranchCode(lessonObj.branch); // Branş kodunu kullan (MATE, FEN vb.)
-                                       branchColor = getBranchColor(lessonObj.branch);
+                                       displayLesson = lessonObj.name;
+                                       displayBranchShort = standardizeBranchCode(lessonObj.branch || lessonObj.name);
+                                       branchColor = getBranchColor(lessonObj.branch || lessonObj.name);
                                     } else {
-                                       // Ders bulunamadıysa tahmin et
-                                       displayLesson = standardizeBranchCode(entry.ders);
+                                       displayLesson = entry.ders;
+                                       displayBranchShort = standardizeBranchCode(entry.ders);
                                        branchColor = getBranchColor(entry.ders);
                                     }
 
-                                    // 2. Öğretmen Bilgisi Çözümleme
                                     const teacherObj = teachers.find(t => t.name === entry.ogretmen || t.id === entry.ogretmen);
                                     if (teacherObj) {
-                                       // Format: Ö.ARAS
                                        const parts = teacherObj.name.trim().split(/\s+/);
                                        if (parts.length >= 2) {
                                           const initial = parts[0].charAt(0).toUpperCase();
@@ -332,7 +329,6 @@ const SchedulingModule: React.FC<SchedulingModuleProps> = ({ teachers, classes, 
                                           displayTeacher = teacherObj.name.toUpperCase();
                                        }
                                     } else {
-                                       // ID ise ve bulunamadıysa olduğu gibi göster
                                        displayTeacher = entry.ogretmen.toUpperCase();
                                     }
                                  }
@@ -340,8 +336,8 @@ const SchedulingModule: React.FC<SchedulingModuleProps> = ({ teachers, classes, 
                                  return (
                                     <td key={`${d}-${h}`} className="border-r border-white/5 p-1 relative">
                                        {entry ? (
-                                          <div className="h-full w-full flex flex-col items-center justify-center bg-[#1e293b] transition-all hover:bg-slate-800 shadow-lg border-l-[4px]" style={{ borderLeftColor: branchColor }}>
-                                             <span className="text-[10px] font-bold text-white/80 leading-none uppercase truncate w-full text-center px-1 tracking-tight">{displayLesson}</span>
+                                          <div className="h-full w-full flex flex-col items-center justify-center bg-[#1e293b] transition-all hover:bg-slate-800 shadow-lg border-l-[4px]" style={{ borderLeftColor: branchColor }} title={displayLesson}>
+                                             <span className="text-[10px] font-medium text-white/80 leading-none uppercase truncate w-full text-center px-1 tracking-tight">{displayBranchShort}</span>
                                              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-1.5 truncate w-full text-center px-1">{displayTeacher}</span>
                                           </div>
                                        ) : (<div className="h-full w-full opacity-5 border border-dashed border-white/10"></div>)}
