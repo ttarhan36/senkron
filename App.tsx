@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ModuleType, Teacher, ClassSection, Lesson, ScheduleEntry, SchoolConfig, ThemeConfig, ThemeMode, Student, ShiftType, Course, Announcement, UserRole, UserSession } from './types';
+import { Teacher, ScheduleEntry, ClassSection, Lesson, ModuleType, ShiftType, SchoolConfig, Student, GradeRecord, Gender, AttendanceRecord, UserRole, LessonLog, Exam, GradeMetadata, SubscriptionStatus, UserSession, Course, Announcement, ThemeConfig, ThemeMode } from './types';
 import { SCHOOL_DNA as DEFAULT_DNA } from './constants';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -63,12 +63,14 @@ const App: React.FC = () => {
         let userRole = UserRole.ADMIN;
         let schoolId = '';
         let fullName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'KULLANICI';
+        let subscriptionStatus = SubscriptionStatus.TRIALING;
+        let trialEndsAtMs = 0;
 
         try {
           // 1. Profil tablosunu kontrol et (en güvenilir kaynak)
           const { data: profile } = await supabase
             .from('user_profiles')
-            .select('*')
+            .select('*, schools!inner(subscription_status, trial_ends_at)')
             .eq('user_id', user.id)
             .maybeSingle();
 
@@ -77,6 +79,37 @@ const App: React.FC = () => {
             userRole = (profile.role as UserRole) || UserRole.ADMIN;
             schoolId = profile.school_id;
             fullName = profile.full_name;
+            const schoolData = (profile as any).schools;
+            if (schoolData) {
+              let currentStatus = schoolData.subscription_status;
+              let currentTrialEnds = schoolData.trial_ends_at;
+
+              // EĞER MEVCUT OKULDA VERİ YOKSA (Eski kayıtlar) -> OTO-AKTİVASYON
+              if (!currentStatus || !currentTrialEnds) {
+                const trialDays = 14;
+                const trialEnds = new Date();
+                trialEnds.setDate(trialEnds.getDate() + trialDays);
+                currentStatus = SubscriptionStatus.TRIALING;
+                currentTrialEnds = trialEnds.toISOString();
+
+                // Veritabanını sessizce güncelle (background repair)
+                supabase.from('schools').update({
+                  subscription_status: currentStatus,
+                  trial_ends_at: currentTrialEnds
+                }).eq('id', schoolId).then(({ error }) => {
+                  if (error) console.error("School metadata auto-repair failed:", error);
+                });
+              }
+
+              const trialEndsAt = new Date(currentTrialEnds).getTime();
+              const now = Date.now();
+              const status = (trialEndsAt < now && currentStatus === SubscriptionStatus.TRIALING)
+                ? SubscriptionStatus.EXPIRED
+                : currentStatus;
+
+              subscriptionStatus = status as SubscriptionStatus;
+              trialEndsAtMs = trialEndsAt;
+            }
           }
           // 2. Metadata'da var mı? (profil oluşturulmuş ama tablo sorgusu başarısız olmuş olabilir)
           else if (user.user_metadata?.school_id) {
@@ -84,7 +117,27 @@ const App: React.FC = () => {
             userRole = (user.user_metadata.role as UserRole) || UserRole.ADMIN;
             fullName = user.user_metadata.full_name || fullName;
 
-            // Metadata var ama profil yok — profili yeniden oluştur (eksik kalmış olabilir)
+            // Metadata var ama profil yok — abonelik bilgilerini okul tablosundan al
+            const { data: sData } = await supabase.from('schools').select('*').eq('id', schoolId).maybeSingle();
+            if (sData) {
+              let currentStatus = sData.subscription_status;
+              let currentTrialEnds = sData.trial_ends_at;
+
+              if (!currentStatus || !currentTrialEnds) {
+                const trialEnds = new Date();
+                trialEnds.setDate(trialEnds.getDate() + 14);
+                currentStatus = SubscriptionStatus.TRIALING;
+                currentTrialEnds = trialEnds.toISOString();
+                await supabase.from('schools').update({ subscription_status: currentStatus, trial_ends_at: currentTrialEnds }).eq('id', schoolId);
+              }
+
+              const trialEndsAt = new Date(currentTrialEnds).getTime();
+              const now = Date.now();
+              subscriptionStatus = (trialEndsAt < now && currentStatus === SubscriptionStatus.TRIALING) ? SubscriptionStatus.EXPIRED : currentStatus as SubscriptionStatus;
+              trialEndsAtMs = trialEndsAt;
+            }
+
+            // Profili yeniden oluştur (eksik kalmış olabilir)
             await supabase.from('user_profiles').upsert({
               user_id: user.id,
               school_id: schoolId,
@@ -98,13 +151,25 @@ const App: React.FC = () => {
             schoolId = `SCH-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`.toUpperCase();
             const newSchoolName = (fullName + " OKULU").toUpperCase();
 
+            const trialDays = 14;
+            const trialEnds = new Date();
+            trialEnds.setDate(trialEnds.getDate() + trialDays);
+
             // Sırayla kayıt oluştur (race condition önlemi)
             // Önce okul
             const { error: schoolErr } = await supabase.from('schools').upsert(
-              { id: schoolId, name: newSchoolName },
+              {
+                id: schoolId,
+                name: newSchoolName,
+                subscription_status: SubscriptionStatus.TRIALING,
+                trial_ends_at: trialEnds.toISOString()
+              },
               { onConflict: 'id' }
             );
             if (schoolErr) console.error("School insert error:", schoolErr);
+
+            subscriptionStatus = SubscriptionStatus.TRIALING;
+            trialEndsAtMs = trialEnds.getTime();
 
             // Sonra config
             const { error: configErr } = await supabase.from('school_config').upsert(
@@ -134,7 +199,9 @@ const App: React.FC = () => {
               id: user.id,
               name: fullName.toUpperCase(),
               schoolId: schoolId,
-              email: user.email
+              email: user.email,
+              subscriptionStatus: subscriptionStatus,
+              trialEndsAt: trialEndsAtMs
             };
             setSession(newSession);
             localStorage.setItem('senkron_session', JSON.stringify(newSession));
@@ -748,6 +815,16 @@ const App: React.FC = () => {
   );
 
   const renderModule = () => {
+    if (!session) return null;
+
+    // SaaS Expiry Block
+    const isExpired = session.subscriptionStatus === SubscriptionStatus.EXPIRED;
+
+    // Yalnızca ADMIN abonelik uyarısını görsün, diğer roller (öğrenci/öğretmen) giriş yapamasın veya bloklansın
+    if (isExpired && activeModule !== ModuleType.SUBSCRIPTION_REQUIRED) {
+      setActiveModule(ModuleType.SUBSCRIPTION_REQUIRED);
+    }
+
     const commonProps = { editMode: isAdmin ? editMode : false, onWatchModeAttempt: () => triggerSuccess("YETKİ_SINIRI"), onSuccess: triggerSuccess };
 
     if (session.role === UserRole.STUDENT) {
@@ -765,7 +842,7 @@ const App: React.FC = () => {
         return <ClassSchedulesModule schedule={finalSchedule} setSchedule={setFinalSchedule} onDeleteScheduleEntry={deleteScheduleFromSupabase} classes={classes} lessons={lessons} teachers={teachers} schoolConfig={schoolConfig} editMode={false} onSuccess={triggerSuccess} userRole={session.role} initialClass={classes.find(c => c.students?.some(s => s.number === session.id))?.name} />;
       }
 
-      return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session.role} userName={session.name} userId={session.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} studentTab={studentTab} />;
+      return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session.role} userName={session.name} userId={session.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} studentTab={studentTab} subscriptionStatus={session.subscriptionStatus} trialEndsAt={session.trialEndsAt} />;
     }
 
     if (session.role === UserRole.TEACHER) {
@@ -792,7 +869,7 @@ const App: React.FC = () => {
     }
 
     switch (activeModule) {
-      case ModuleType.DASHBOARD: return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session?.role} userName={session?.name} userId={session?.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} />;
+      case ModuleType.DASHBOARD: return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session?.role} userName={session?.name} userId={session?.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} subscriptionStatus={session?.subscriptionStatus} trialEndsAt={session?.trialEndsAt} />;
       case ModuleType.TEACHERS: return <TeachersModule teachers={teachers} setTeachers={setTeachers} classes={classes} setClasses={setClasses} schedule={finalSchedule} allClasses={classes} allLessons={lessons} schoolConfig={schoolConfig} onDeleteTeacherDB={(id) => deleteFromSupabase('teachers', id)} userRole={session?.role} currentUserId={session?.id} {...commonProps} />;
       case ModuleType.CLASSES: return <ClassesModule classes={classes} setClasses={setClasses} allLessons={lessons} setLessons={setLessons} allTeachers={teachers} setTeachers={setTeachers} schedule={finalSchedule} setSchedule={setFinalSchedule} schoolConfig={schoolConfig} courses={courses} setCourses={setCourses} userRole={session?.role} userId={session?.id} onDeleteStudentDB={(id) => deleteFromSupabase('students', id)} onDeleteClassDB={(id) => deleteFromSupabase('classes', id)} {...commonProps} />;
       case ModuleType.COURSES: return <CoursesModule courses={courses} setCourses={setCourses} teachers={teachers} announcements={announcements} setAnnouncements={setAnnouncements} classes={classes} {...commonProps} />;
@@ -804,7 +881,42 @@ const App: React.FC = () => {
       case ModuleType.ABSENCE_REPORT: return <AbsenceReportModule classes={classes} allLessons={lessons} />;
       case ModuleType.COMMUNICATION: return <CommunicationModule announcements={announcements} setAnnouncements={setAnnouncements} classes={classes} userRole={session.role} currentUserId={session.id} onDeleteAnnouncementDB={(id) => deleteFromSupabase('announcements', id)} {...commonProps} />;
       case ModuleType.SETTINGS: return <SettingsModule config={schoolConfig} setConfig={setSchoolConfig} theme={theme} setTheme={setTheme} teachers={teachers} setTeachers={setTeachers} lessons={lessons} setLessons={setLessons} classes={classes} setClasses={setClasses} announcements={announcements} setAnnouncements={setAnnouncements} courses={courses} setCourses={setCourses} schedule={finalSchedule} setSchedule={setFinalSchedule} onRestoreDNA={handleRestoreDNA} onImportData={handleImportStudents} onClearAll={handleHardReset} onSuccess={triggerSuccess} schoolId={session.schoolId} />;
-      default: return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} />;
+      case ModuleType.SUBSCRIPTION_REQUIRED: {
+        const studentCount = classes.reduce((acc, c) => acc + (c.students?.length || 0), 0);
+        return (
+          <div className="flex flex-col items-center justify-center h-full bg-[#0d141b] text-white p-8 text-center animate-in fade-in duration-500">
+            <div className="w-24 h-24 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
+              <i className="fa-solid fa-clock-rotate-left text-4xl text-red-500 animate-pulse"></i>
+            </div>
+            <h2 className="text-3xl font-black tracking-tighter mb-4 uppercase">DENEME SÜRESİ DOLDU</h2>
+            <p className="text-slate-400 max-w-md mb-8 font-medium leading-relaxed">
+              14 günlük ücretsiz kullanım hakkınız sona ermiştir. <br />
+              Sistemin tüm özelliklerine erişmeye devam etmek için yıllık aboneliğinizi başlatmanız gerekmektedir.
+            </p>
+            <div className="bg-[#1a242e] border border-white/5 p-6 rounded-sm mb-8 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">YILLIK ÜCRET (ÖĞRENCİ BAŞI)</span>
+                <span className="text-xl font-black text-[#fbbf24]">$1.80</span>
+              </div>
+              <div className="flex justify-between items-center py-4 border-t border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TOPLAM ÖĞRENCİ</span>
+                <span className="text-xl font-black text-white">{studentCount}</span>
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                <span className="text-[12px] font-black text-white uppercase tracking-widest">TOPLAM TUTAR</span>
+                <span className="text-2xl font-black text-green-500">${(studentCount * 1.80).toFixed(2)} / YIL</span>
+              </div>
+            </div>
+            <button className="px-12 h-14 bg-green-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(22,163,74,0.3)] hover:brightness-110 active:scale-95 transition-all">
+              ABONELİĞİ ŞİMDİ BAŞLAT
+            </button>
+            <div className="mt-8">
+              <button onClick={() => { localStorage.removeItem('senkron_session'); window.location.reload(); }} className="text-[10px] font-bold text-slate-600 hover:text-white uppercase tracking-widest border-b border-transparent hover:border-white/20 transition-all">FARKLI HESAPLA GİRİŞ YAP</button>
+            </div>
+          </div>
+        );
+      }
+      default: return <Dashboard teachers={teachers} classes={classes} setClasses={setClasses} lessons={lessons} schedule={finalSchedule} setActiveModule={setActiveModule} announcements={announcements} userRole={session?.role} userName={session?.name} userId={session?.id} courses={courses} setCourses={setCourses} onSuccess={triggerSuccess} subscriptionStatus={session?.subscriptionStatus} trialEndsAt={session?.trialEndsAt} />;
     }
   };
 

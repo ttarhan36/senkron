@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ModuleType, UserRole } from '../types';
+import { supabase } from '../services/supabaseClient';
 
 interface SidebarProps {
   activeModule: ModuleType;
@@ -91,6 +92,21 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, userRo
             <span className="hidden md:block font-black text-[8px] uppercase tracking-widest">{item.label}</span>
           </button>
         ))}
+
+        <div className="pt-4 mt-4 border-t border-[#354a5f]/30">
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              localStorage.removeItem('senkron_session');
+              window.location.reload();
+            }}
+            className="w-full flex items-center justify-center md:justify-start gap-4 px-2.5 md:px-4 py-5.5 md:py-3 text-red-400/50 hover:text-red-400 hover:bg-red-400/5 transition-all group rounded-sm"
+            title="Güvenli Çıkış"
+          >
+            <i className="fa-solid fa-right-from-bracket fa-fw text-[18px] md:text-[12px] group-hover:scale-110 transition-transform"></i>
+            <span className="hidden md:block font-black text-[8px] uppercase tracking-widest">GÜVENLİ ÇIKIŞ</span>
+          </button>
+        </div>
       </div>
 
       <div className="mt-auto px-6 py-4 border-t border-[#354a5f] hidden md:block">
@@ -108,6 +124,32 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, userRo
           <div className={`h-[1px] ${dbError ? 'bg-orange-500/50' : 'bg-[#354a5f]'} overflow-hidden`}>
             <div className={`h-full ${dbError ? 'bg-orange-500 w-[40%] animate-ping' : 'bg-green-500 w-full opacity-20'}`}></div>
           </div>
+          {/* SaaS Trial Status */}
+          {(() => {
+            const sessionStr = localStorage.getItem('senkron_session');
+            if (!sessionStr) return null;
+            try {
+              const session = JSON.parse(sessionStr);
+              if (session.subscriptionStatus === 'TRIALING' && session.trialEndsAt) {
+                const daysLeft = Math.ceil((session.trialEndsAt - Date.now()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div className="mt-3 pt-3 border-t border-[#354a5f] px-1 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                    <div className="flex justify-between items-center text-[7px] font-black uppercase tracking-widest mb-1.5 transition-colors">
+                      <span className="text-slate-500">DENEME_SÜRESİ</span>
+                      <span className={daysLeft < 3 ? 'text-red-500 animate-pulse' : 'text-blue-500'}>{daysLeft} GÜN</span>
+                    </div>
+                    <div className="h-1 bg-black/40 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-1000 ${daysLeft < 3 ? 'bg-red-500 shadow-[0_0_5px_#ef4444]' : 'bg-[#3b82f6]'}`}
+                        style={{ width: `${Math.max(0, Math.min(100, (daysLeft / 14) * 100))}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              }
+            } catch (e) { return null; }
+            return null;
+          })()}
         </div>
       </div>
     </nav>

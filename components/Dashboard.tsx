@@ -19,11 +19,14 @@ interface DashboardProps {
    setCourses?: (c: Course[]) => void;
    onSuccess?: (msg?: string) => void;
    studentTab?: 'GENEL' | 'DEVAMSIZLIK' | 'KONULAR' | 'SINAVLAR' | 'NOTLARIM' | 'KURSLAR';
+   subscriptionStatus?: string;
+   trialEndsAt?: number;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
    teachers, classes, setClasses, lessons, schedule, setActiveModule,
-   announcements, userRole, userName, userId, courses, setCourses, onSuccess, studentTab
+   announcements, userRole, userName, userId, courses, setCourses, onSuccess, studentTab,
+   subscriptionStatus, trialEndsAt
 }) => {
    const [activeTab, setActiveTab] = useState<'GENEL' | 'DEVAMSIZLIK' | 'KONULAR' | 'SINAVLAR' | 'NOTLARIM' | 'KURSLAR'>('GENEL');
    const [attendanceMonth, setAttendanceMonth] = useState(new Date());
@@ -784,6 +787,36 @@ const Dashboard: React.FC<DashboardProps> = ({
    // Admin / Teacher generic dashboard
    return (
       <div className="space-y-6 animate-slide-up pb-20 overflow-x-hidden">
+         {/* ABONELİK BANNER (ADMIN) */}
+         {userRole === UserRole.ADMIN && subscriptionStatus === 'TRIALING' && trialEndsAt && (
+            <div className="mx-1 p-3 bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-500/30 flex items-center justify-between rounded-sm relative overflow-hidden group">
+               <div className="absolute inset-0 bg-grid-hatched opacity-20 group-hover:opacity-30 transition-opacity"></div>
+               <div className="flex items-center gap-4 z-10">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/40">
+                     <i className="fa-solid fa-clock-rotate-left text-blue-400"></i>
+                  </div>
+                  <div>
+                     <h4 className="text-[11px] font-black text-white uppercase tracking-widest leading-none">DENEME SÜRESİ AKTİF</h4>
+                     <p className="text-[8px] font-bold text-blue-200/60 uppercase mt-1 tracking-widest">SİSTEMİ {Math.ceil((trialEndsAt - Date.now()) / (1000 * 60 * 60 * 24))} GÜN DAHA ÜCRETSİZ KULLANABİLİRSİNİZ</p>
+                  </div>
+               </div>
+               <div className="flex flex-wrap items-center justify-end gap-2 z-10 sm:flex-nowrap">
+                  <button
+                     onClick={() => window.open('https://www.iyzico.com/', '_blank')}
+                     className="px-4 sm:px-6 py-2 bg-green-600 text-white font-black text-[9px] uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(22,163,74,0.3)] whitespace-nowrap"
+                  >
+                     ŞİMDİ ABONE OL
+                  </button>
+                  <button
+                     onClick={() => setActiveModule(ModuleType.SETTINGS)}
+                     className="px-4 sm:px-6 py-2 bg-blue-600/50 border border-blue-500/30 text-white font-black text-[9px] uppercase tracking-widest hover:bg-blue-600 transition-all whitespace-nowrap"
+                  >
+                     AYARLAR
+                  </button>
+               </div>
+            </div>
+         )}
+
          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 px-1">
             <div className="bg-[#1e293b]/60 border border-white/10 p-3 flex flex-col justify-between h-28 shadow-lg group">
                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">SİSTEM_KADROSU</span>

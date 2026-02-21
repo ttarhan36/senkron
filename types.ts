@@ -5,6 +5,14 @@ export enum UserRole {
   STUDENT = 'ÖĞRENCİ'
 }
 
+export enum SubscriptionStatus {
+  TRIALING = 'TRIALING',
+  ACTIVE = 'ACTIVE',
+  PAST_DUE = 'PAST_DUE',
+  CANCELED = 'CANCELED',
+  EXPIRED = 'EXPIRED'
+}
+
 export interface UserSession {
   role: UserRole;
   id: string;
@@ -12,6 +20,8 @@ export interface UserSession {
   schoolId: string;
   email?: string;
   isFirstLogin?: boolean;
+  subscriptionStatus?: SubscriptionStatus;
+  trialEndsAt?: number;
 }
 
 export enum ModuleType {
@@ -43,7 +53,8 @@ export enum ModuleType {
   TEACHER_SCHEDULE = 'TEACHER_SCHEDULE',
   TEACHER_CONSTRAINTS = 'TEACHER_CONSTRAINTS',
   TEACHER_PERFORMANCE = 'TEACHER_PERFORMANCE',
-  TEACHER_STUDENTS = 'TEACHER_STUDENTS'
+  TEACHER_STUDENTS = 'TEACHER_STUDENTS',
+  SUBSCRIPTION_REQUIRED = 'SUBSCRIPTION_REQUIRED'
 }
 
 export enum ShiftType {
