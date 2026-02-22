@@ -155,9 +155,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
         },
         {
             title: "Yapay Zeka Ders Motoru",
-            description: "Binlerce olasılığı saniyeler içinde hesaplayan gelişmiş AI motoruyla, okulunuzun en ideal ders programını oluşturun.",
+            description: "Binlerce olasılığı saniyeler içinde hesaplayan gelişmiş AI motoruyla veya dilerseniz tamamen manuel olarak okulunuzun en ideal ders programını oluşturun.",
             icon: <Brain className="w-6 h-6" />,
-            items: ["Otomatik çakışma kontrolü", "Optimize ders dağıtımı", "Boş ders yönetimi"]
+            items: ["Otomatik veya manuel planlama", "Anlık çakışma kontrolü", "Esnek ders dağıtımı"]
         },
         {
             title: "e-Okul & MEB Uyumu",
@@ -181,20 +181,44 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
     const faqs = [
         {
-            q: "Ders programını ne kadar sürede hazırlar?",
-            a: "Senkron'un yapay zeka motoru, binlerce olasılığı saniyeler içinde tarar. Okulunuzun büyüklüğüne göre 2 ile 4 dakika arasında en optimize programı sunar."
+            q: "Senkron tam olarak nedir ve okuluma ne katar?",
+            a: "Senkron, okul yönetimini baştan sona dijitalleştiren yapay zeka tabanlı bütünleşik bir platformdur. Saniyeler içinde en adil ve optimize ders programını hazırlayan 'Zeka Motoru', ek bir cihaz gerektirmeden sadece cep telefonu kamerasıyla sınav kağıtlarını okuyan 'AI Optik', anlık mobil yoklama ve gelişmiş öğrenci akademik analiz araçlarını tek bir merkezde toplar. Manuel süreçlerin yarattığı veri karmaşasını ve personel yükünü ortadan kaldırarak okulunuza operasyonel verimlilik, %100 MEB uyumu ve objektif yönetim imkanı katar."
+        },
+        {
+            q: "Ders programını manuel hazırlayabilir miyim?",
+            a: "Kesinlikle. Senkron'un gelişmiş arayüzü sayesinde tüm programı manuel olarak sürükle-bırak yöntemiyle oluşturabilir veya AI motorunun hazırladığı program üzerinde dilediğiniz manuel değişiklikleri yapabilirsiniz."
+        },
+        {
+            q: "Zeka motoru programı ne kadar sürede hazırlar?",
+            a: "AI motoru binlerce olasılığı tarayarak, okulunuzun büyüklüğüne göre 2 ile 4 dakika içinde en optimize ve çakışmasız programı sunar."
+        },
+        {
+            q: "Öğretmen kısıtlamalarını sisteme girebilir miyim?",
+            a: "Kesinlikle! \"Akıllı Kısıtlar\" özelliği sayesinde örneğin bir öğretmenin Salı gününü boşaltmak istiyorsanız, sadece o günü işaretlemeniz yeterlidir; sistem tüm programı saniyeler içinde revize eder. Ayrıca öğretmenlerin haftalık saat yüklerini ve doluluk oranlarını kapasite kontrolü ile izleyebilirsiniz."
+        },
+        {
+            q: "Öğretmen ve sınıf çakışmaları nasıl çözülüyor?",
+            a: "Senkron Zeka Motoru, binlerce olasılığı saniyeler içinde tarar ve size sıfır hata ile en optimize planı sunar. Yapay zeka destekli \"Akıllı Çakışma Önleyici\", çakışmaları daha oluşmadan yakalar ve kırmızı uyarıları saniyeler içinde yeşil onay tiklerine dönüştürür."
+        },
+        {
+            q: "Veriler üzerinde kimler değişiklik yapabilir?",
+            a: "Sistemde veri hiyerarşisi mutlak güven üzerine kuruludur. Ders notları ve devamsızlık içerikleri sadece ilgili branş öğretmeninin düzenleme yetkisindedir; okul idaresi veya yöneticiler bu verilere müdahale edemez. Her kullanıcı sadece kendi yetki alanındaki verilere erişebilir."
+        },
+        {
+            q: "Veri güvenliği ve denetim nasıl sağlanıyor?",
+            a: "Sistemde yapılan her yetkili işlem saniyeler içinde kayıt (log) altına alınır. Kimin, ne zaman ve hangi değişikliği yaptığı geri döndürülemez şekilde arşivlenerek mutlak denetleme ve manipülasyon koruması sağlanır."
         },
         {
             q: "e-Okul ile veri aktarımı nasıl çalışıyor?",
             a: "Senkron, e-Okul'un beklediği formatlarda raporlar üretir. Bu raporları tek tıkla indirip e-Okul sistemine yükleyebilir veya doğrudan entegrasyon API'larını kullanabilirsiniz."
         },
         {
-            q: "Fiyatlandırma modeliniz nedir?",
-            a: "Senkron, öğrenci başı yıllık lisanslama modeliyle çalışır. Yıllık öğrenci başı ücretimiz $1.80'dır. Bu ücrete tüm güncellemeler ve teknik destek dahildir."
-        },
-        {
             q: "Veri girişini siz yapıyor musunuz?",
             a: "Dilerseniz Excel formatındaki verilerinizi bize iletebilirsiniz. Uzman ekibimiz tüm öğrenci, öğretmen ve ders tanımlamalarınızı yaparak sistemi anahtar teslim şekilde size sunabilir."
+        },
+        {
+            q: "Fiyatlandırma modeliniz nedir?",
+            a: "Senkron, öğrenci başı yıllık lisanslama modeliyle çalışır. Yıllık öğrenci başı ücretimiz $1.80'dır. Bu ücrete tüm güncellemeler ve teknik destek dahildir."
         }
     ];
 
@@ -260,7 +284,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             </AnimatePresence>
 
             {/* Hero Section */}
-            <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+            <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-cyan-50/50 rounded-[100%] blur-3xl -z-10" />
 
                 <div className="container mx-auto px-6 text-center">
@@ -269,18 +293,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-bold uppercase tracking-wider mb-8">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-bold uppercase tracking-wider mb-6">
                             <ShieldCheck className="w-4 h-4" /> MEB Müfredatı ile %100 Uyumlu
                         </div>
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-slate-900 mb-8">
-                            OKUL YÖNETİMİNDE<br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-blue-600">YENİ NESİL ÇÖZÜM</span>
+                        <h1 className="text-6xl md:text-8xl lg:text-[10rem] font-black tracking-tighter leading-[0.95] text-slate-900 mb-8 uppercase">
+                            OKUL<br />
+                            YÖNETİMİNDE<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-blue-600">YENİ NESİL</span><br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-blue-600">ÇÖZÜM</span>
                         </h1>
-                        <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-12 font-medium leading-relaxed">
+                        <p className="text-base md:text-lg text-slate-600 max-w-3xl mx-auto mb-8 font-medium leading-relaxed">
                             Öğretmen, öğrenci ve sınıf yönetiminden otomatik ders programı oluşturmaya, <span className="text-slate-900 font-bold">sınav kağıdını okuma</span>, <span className="text-slate-900 font-bold">yoklama takibinden</span> AI destekli analize kadar tüm eğitim süreçlerinizi tek platformda yönetin.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
                             <button
                                 onClick={onLoginClick}
                                 className="w-full sm:w-auto px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-lg shadow-2xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
@@ -296,63 +322,97 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                         </div>
 
                         {/* Interactive Image Slider */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 40 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3, duration: 0.8 }}
-                            className="relative max-w-5xl mx-auto mt-14 rounded-2xl md:rounded-[2.5rem] p-2 bg-gradient-to-b from-white to-slate-200/50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] border border-white/40 ring-1 ring-slate-900/5 overflow-hidden"
-                        >
-                            <div className="aspect-[16/9] bg-[#f8fafc] rounded-2xl overflow-hidden relative group">
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={currentSlide}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
-                                        transition={{ duration: 0.5 }}
-                                        className="absolute inset-0"
-                                    >
-                                        <img
-                                            src={slides[currentSlide].url}
-                                            alt={slides[currentSlide].title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </motion.div>
-                                </AnimatePresence>
-
-                                {/* Slider Controls */}
-                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-10 px-4 py-2 bg-black/10 backdrop-blur-md rounded-full border border-white/20">
-                                    {slides.map((_, idx) => (
-                                        <button
-                                            key={idx}
-                                            onClick={() => setCurrentSlide(idx)}
-                                            className={cn(
-                                                "w-2.5 h-2.5 rounded-full transition-all duration-300",
-                                                currentSlide === idx ? "bg-cyan-500 w-8" : "bg-white/50 hover:bg-white"
-                                            )}
-                                        />
-                                    ))}
+                        <div className="relative max-w-5xl mx-auto mt-14">
+                            {/* Massive Slide Title - Outside & Above */}
+                            <div className="mb-8 px-4 md:px-0">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-6 bg-cyan-500 rounded-full" />
+                                        <span className="text-[10px] md:text-xs font-black text-cyan-600 uppercase tracking-[0.3em]">Senkron Özellikleri</span>
+                                    </div>
+                                    <span className="text-sm md:text-lg font-black text-slate-300 tabular-nums">{currentSlide + 1} / {slides.length}</span>
                                 </div>
-
-                                {/* Title Overlay */}
-                                <div className="absolute top-6 left-6 px-4 py-2 bg-white/90 backdrop-blur rounded-xl border border-slate-200/50 shadow-sm transition-opacity group-hover:opacity-100 opacity-0 md:opacity-100">
-                                    <span className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">{slides[currentSlide].title}</span>
-                                </div>
+                                <h2 className="text-2xl md:text-5xl font-black text-slate-900 tracking-tighter leading-none">
+                                    {slides[currentSlide].title}
+                                </h2>
                             </div>
-                        </motion.div>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 40 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3, duration: 0.8 }}
+                                className="relative rounded-2xl md:rounded-[3rem] p-2 bg-gradient-to-b from-white to-slate-200/50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] border border-white/40 ring-1 ring-slate-900/5 overflow-hidden"
+                            >
+                                <div className="aspect-[4/3] md:aspect-[16/11] bg-[#f8fafc] rounded-2xl overflow-hidden relative">
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={currentSlide}
+                                            initial={{ opacity: 0, x: 20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -20 }}
+                                            transition={{ duration: 0.5 }}
+                                            className="absolute inset-0"
+                                        >
+                                            <img
+                                                src={slides[currentSlide].url}
+                                                alt={slides[currentSlide].title}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </motion.div>
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+
+                            {/* Slider Navigation Dots - Outside & Below */}
+                            <div className="flex justify-center gap-3 mt-8">
+                                {slides.map((_, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setCurrentSlide(idx)}
+                                        className={cn(
+                                            "w-2.5 h-2.5 rounded-full transition-all duration-300",
+                                            currentSlide === idx ? "bg-cyan-500 w-10" : "bg-slate-300 hover:bg-slate-400"
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     </motion.div>
                 </div>
             </section>
 
-            {/* Stats Section */}
-            <section className="bg-slate-900 py-20 relative overflow-hidden">
+            {/* FAQ Section (Moved here from below) */}
+            <section className="bg-slate-900 py-24 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] rounded-full" />
-                <div className="container mx-auto px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
-                        {stats.map((stat, idx) => (
-                            <div key={idx} className="flex flex-col gap-2">
-                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter">{stat.value}</span>
-                                <span className="text-cyan-400/60 uppercase text-xs font-black tracking-widest">{stat.label}</span>
+                <div className="container mx-auto px-6 max-w-4xl relative z-10">
+                    <div className="text-center mb-16">
+                        <h2 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Sıkça Sorulan Sorular</h2>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                        {faqs.map((faq, idx) => (
+                            <div key={idx} className="bg-white/5 border border-white/10 rounded-none overflow-hidden hover:border-cyan-500/30 transition-colors">
+                                <button
+                                    onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
+                                    className="w-full px-8 py-4 flex justify-between items-center text-left"
+                                >
+                                    <span className="text-base text-white tracking-tight flex-1">{faq.q}</span>
+                                    <div className={cn("p-1 rounded-none transition-all", activeFaq === idx ? "bg-cyan-500 text-white rotate-45" : "bg-white/10 text-slate-400 -rotate-0")}>
+                                        <Plus className="w-5 h-5" />
+                                    </div>
+                                </button>
+                                <AnimatePresence>
+                                    {activeFaq === idx && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="px-8 pb-8 text-[15px] text-slate-300 font-medium leading-relaxed"
+                                        >
+                                            {faq.a}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ))}
                     </div>
@@ -365,7 +425,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                     <div className="max-w-3xl mx-auto text-center mb-20">
                         <h2 className="text-sm font-black text-cyan-600 uppercase tracking-widest mb-4">Üstün Teknoloji</h2>
                         <h3 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 mb-6">Senkron ile Yönetim Artık Bir Sanat</h3>
-                        <p className="text-lg text-slate-600 font-medium leading-relaxed mb-8">Pazar geceleri Excel tablolarıyla boğuşmaya son veriyoruz. Yapay zeka ile her şey senkronize, her şey şeffaf.</p>
+                        <p className="text-lg text-slate-600 font-medium leading-relaxed mb-8">Excel tablolarıyla boğuşmaya son veriyoruz. Yapay zeka ile her şey senkronize, her şey şeffaf.</p>
                         <a
                             href="https://www.genspark.ai/api/files/s/wb6K2zMh"
                             target="_blank"
@@ -468,7 +528,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {[
-                            { name: "Ahmet Y.", role: "Kampüs Müdürü", text: "Pazar geceleri sabahlara kadar süren ders programı hazırlama dönemi bitti. 10 dakikada her şey hazır!" },
+                            { name: "Ahmet Y.", role: "Kampüs Müdürü", text: "Sabahlara kadar süren ders programı hazırlama dönemi bitti. 10 dakikada her şey hazır!" },
                             { name: "Zeynep K.", role: "Okul Müdürü", text: "Öğretmen yükü dengelemesi muhteşem çalışıyor. Artık kimse 'ben çok ders giriyorum' demiyor." },
                             { name: "Mustafa S.", role: "Müdür Yardımcısı", text: "e-Okul entegrasyonu sayesinde veri girişi için saatler harcamıyoruz. Tek tıkla tüm raporlar hazır." }
                         ].map((t, idx) => (
@@ -490,42 +550,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                 </div>
             </section>
 
-            {/* FAQ Section */}
-            <section className="py-24 md:py-32">
-                <div className="container mx-auto px-6 max-w-4xl">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter uppercase">Sıkça Sorulan Sorular</h2>
-                    </div>
-
-                    <div className="flex flex-col gap-4">
-                        {faqs.map((faq, idx) => (
-                            <div key={idx} className="border border-slate-100 rounded-2xl overflow-hidden hover:border-cyan-200 transition-colors">
-                                <button
-                                    onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
-                                    className="w-full px-8 py-6 flex justify-between items-center text-left bg-white"
-                                >
-                                    <span className="text-lg font-bold text-slate-900 tracking-tight">{faq.q}</span>
-                                    <div className={cn("p-1 rounded-lg transition-all", activeFaq === idx ? "bg-cyan-500 text-white rotate-45" : "bg-slate-50 text-slate-400 -rotate-0")}>
-                                        <Plus className="w-5 h-5" />
-                                    </div>
-                                </button>
-                                <AnimatePresence>
-                                    {activeFaq === idx && (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: "auto", opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            className="px-8 pb-8 text-slate-600 font-medium leading-relaxed bg-white"
-                                        >
-                                            {faq.a}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
             {/* CTA Section */}
             <section className="pb-24 pt-12">
@@ -541,7 +565,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                                 onClick={onLoginClick}
                                 className="px-12 py-6 bg-white text-slate-900 rounded-2xl font-black text-xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-cyan-900/40"
                             >
-                                DEMO TALEBİ OLUŞTURUN
+                                ÜCRETSİZ KAYDOL
                             </button>
                         </div>
                     </div>
