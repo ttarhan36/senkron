@@ -18,6 +18,7 @@ import AuthTerminal from './components/Auth/AuthTerminal';
 import CredentialsModule from './components/CredentialsModule';
 import ForcePasswordChangeModal from './components/ForcePasswordChangeModal';
 import AbsenceReportModule from './components/AbsenceReportModule';
+import LandingPage from './components/LandingPage';
 import { supabase } from './services/supabaseClient';
 import { standardizeBranchCode, standardizeDayCode } from './utils';
 
@@ -33,6 +34,8 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [showAuth, setShowAuth] = useState(false);
+
   const authProcessingRef = useRef(false);
   const sessionRef = useRef(session);
 
@@ -47,6 +50,7 @@ const App: React.FC = () => {
       if (event === 'SIGNED_OUT') {
         setSession(null);
         localStorage.removeItem('senkron_session');
+        setShowAuth(true); // Redirect to login page on sign out
         authProcessingRef.current = false;
         return;
       }
@@ -805,7 +809,25 @@ const App: React.FC = () => {
     return r === 'ADMIN' || r === 'İDARECİ' || r === 'IDARECI' || r === 'YÖNETİCİ' || session.role === UserRole.ADMIN;
   }, [session]);
 
-  if (!session) return <AuthTerminal onAuthSuccess={(s) => { setSession(s); localStorage.setItem('senkron_session', JSON.stringify(s)); fetchData(s.schoolId); setActiveModule(s.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW : s.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW : ModuleType.DASHBOARD); }} triggerSuccess={triggerSuccess} />;
+
+  if (!session) {
+    if (showAuth) {
+      return (
+        <AuthTerminal
+          onAuthSuccess={(s) => {
+            setSession(s);
+            localStorage.setItem('senkron_session', JSON.stringify(s));
+            fetchData(s.schoolId);
+            setActiveModule(s.role === UserRole.STUDENT ? ModuleType.STUDENT_OVERVIEW : s.role === UserRole.TEACHER ? ModuleType.TEACHER_OVERVIEW : ModuleType.DASHBOARD);
+          }}
+          triggerSuccess={triggerSuccess}
+          onBackToLanding={() => setShowAuth(false)}
+        />
+      );
+    }
+    return <LandingPage onLoginClick={() => setShowAuth(true)} />;
+  }
+
 
   if (isLoading) return (
     <div className="h-screen w-screen bg-[#080c10] flex flex-col items-center justify-center p-4 bg-grid-hatched">
@@ -883,8 +905,26 @@ const App: React.FC = () => {
       case ModuleType.SETTINGS: return <SettingsModule config={schoolConfig} setConfig={setSchoolConfig} theme={theme} setTheme={setTheme} teachers={teachers} setTeachers={setTeachers} lessons={lessons} setLessons={setLessons} classes={classes} setClasses={setClasses} announcements={announcements} setAnnouncements={setAnnouncements} courses={courses} setCourses={setCourses} schedule={finalSchedule} setSchedule={setFinalSchedule} onRestoreDNA={handleRestoreDNA} onImportData={handleImportStudents} onClearAll={handleHardReset} onSuccess={triggerSuccess} schoolId={session.schoolId} />;
       case ModuleType.SUBSCRIPTION_REQUIRED: {
         const studentCount = classes.reduce((acc, c) => acc + (c.students?.length || 0), 0);
+        const [isCalculating, setIsCalculating] = useState(false);
+        const [showFinalPay, setShowFinalPay] = useState(false);
+        const [totalAmount, setTotalAmount] = useState((studentCount * 1.80).toFixed(2));
+
+        const handleCalculate = () => {
+          setIsCalculating(true);
+          setTimeout(() => {
+            setIsCalculating(false);
+            setShowFinalPay(true);
+          }, 1500);
+        };
+
+        const handleProceedToPayment = () => {
+          // Bu kısım gerçek bir ödeme sistemine (Stripe/PayPal vb.) yönlendirme yapabilir
+          const paymentUrl = `https://checkout.senkron.ai/pay?amount=${totalAmount}&schoolId=${session.schoolId}`;
+          window.open(paymentUrl, '_blank');
+        };
+
         return (
-          <div className="flex flex-col items-center justify-center h-full bg-[#0d141b] text-white p-8 text-center animate-in fade-in duration-500">
+          <div className="flex flex-col items-center justify-center h-full bg-[#0d141b] text-white p-8 text-center animate-in fade-in duration-500 font-mono">
             <div className="w-24 h-24 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
               <i className="fa-solid fa-clock-rotate-left text-4xl text-red-500 animate-pulse"></i>
             </div>
@@ -893,25 +933,58 @@ const App: React.FC = () => {
               14 günlük ücretsiz kullanım hakkınız sona ermiştir. <br />
               Sistemin tüm özelliklerine erişmeye devam etmek için yıllık aboneliğinizi başlatmanız gerekmektedir.
             </p>
-            <div className="bg-[#1a242e] border border-white/5 p-6 rounded-sm mb-8 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
+
+            <div className="bg-[#1a242e] border border-white/5 p-8 rounded-xl mb-8 w-full max-w-md shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
                 <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">YILLIK ÜCRET (ÖĞRENCİ BAŞI)</span>
                 <span className="text-xl font-black text-[#fbbf24]">$1.80</span>
               </div>
-              <div className="flex justify-between items-center py-4 border-t border-white/5">
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">TOPLAM ÖĞRENCİ</span>
-                <span className="text-xl font-black text-white">{studentCount}</span>
+              <div className="flex justify-between items-center pb-6 border-b border-white/5">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">AKTİF ÖĞRENCİ SAYISI</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xl font-black text-white">{studentCount}</span>
+                </div>
               </div>
-              <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                <span className="text-[12px] font-black text-white uppercase tracking-widest">TOPLAM TUTAR</span>
-                <span className="text-2xl font-black text-green-500">${(studentCount * 1.80).toFixed(2)} / YIL</span>
-              </div>
+
+              {!showFinalPay ? (
+                <button
+                  onClick={handleCalculate}
+                  disabled={isCalculating}
+                  className="w-full mt-6 py-4 bg-slate-800 border border-white/10 text-white font-black text-xs uppercase tracking-widest hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                >
+                  {isCalculating ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      HESAPLANIYOR...
+                    </>
+                  ) : (
+                    "ÖDEME TUTARINI HESAPLA"
+                  )}
+                </button>
+              ) : (
+                <div className="mt-6 animate-in zoom-in duration-300">
+                  <div className="flex justify-between items-center p-4 bg-green-500/5 border border-green-500/20 rounded-lg mb-6">
+                    <span className="text-[12px] font-black text-green-500 uppercase tracking-widest">TOPLAM TAHSİLAT</span>
+                    <span className="text-2xl font-black text-green-500 animate-pulse">${totalAmount} <span className="text-xs">/ YIL</span></span>
+                  </div>
+                  <button
+                    onClick={handleProceedToPayment}
+                    className="w-full py-5 bg-green-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(22,163,74,0.3)] hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3"
+                  >
+                    <i className="fa-solid fa-credit-card"></i> ÖDEME SAYFASINA GİT
+                  </button>
+                </div>
+              )}
             </div>
-            <button className="px-12 h-14 bg-green-600 text-white font-black text-sm uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(22,163,74,0.3)] hover:brightness-110 active:scale-95 transition-all">
-              ABONELİĞİ ŞİMDİ BAŞLAT
-            </button>
-            <div className="mt-8">
-              <button onClick={() => { localStorage.removeItem('senkron_session'); window.location.reload(); }} className="text-[10px] font-bold text-slate-600 hover:text-white uppercase tracking-widest border-b border-transparent hover:border-white/20 transition-all">FARKLI HESAPLA GİRİŞ YAP</button>
+
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={() => { localStorage.removeItem('senkron_session'); window.location.reload(); }}
+                className="text-[10px] font-bold text-slate-600 hover:text-white uppercase tracking-widest border-b border-transparent hover:border-white/20 transition-all"
+              >
+                FARKLI HESAPLA GİRİŞ YAP
+              </button>
             </div>
           </div>
         );

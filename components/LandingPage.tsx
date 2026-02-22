@@ -1,0 +1,669 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    CheckCircle2,
+    PlayCircle,
+    Calendar,
+    ShieldCheck,
+    Zap,
+    CreditCard,
+    BarChart3,
+    Globe,
+    ChevronRight,
+    Menu,
+    X,
+    Plus,
+    Minus,
+    MessageSquare,
+    ArrowRight,
+    Database,
+    Brain,
+    Layers,
+    Users,
+    Building2,
+    Check
+} from 'lucide-react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+
+interface LandingPageProps {
+    onLoginClick: () => void;
+}
+
+const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [activeFaq, setActiveFaq] = useState<number | null>(null);
+    const [scrolled, setScrolled] = useState(false);
+
+    // Calculator State
+    const [studentCount, setStudentCount] = useState(500);
+
+    // Slider State
+    const [currentSlide, setCurrentSlide] = useState(0);
+    const slides = [
+        { url: '/slide_optik.png', title: 'Optik Form Okuma' },
+        { url: '/slide_isgucu.png', title: 'İş Gücü Verimliliği' },
+        { url: '/slide_analiz.png', title: 'Detaylı Öğrenci Analizi' },
+        { url: '/slide_ders_analizi.png', title: 'Detaylı Ders Analizi' },
+        { url: '/slide_programlama.png', title: 'AI Destekli Programlama' },
+        { url: '/slide_guvenlik.png', title: 'Güvenlik ve Arşiv' },
+        { url: '/slide_yonetim.png', title: 'Okul Yönetimi' }
+    ];
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % slides.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, []);
+
+    // Legal Modal State
+    const [legalModal, setLegalModal] = useState<{ isOpen: boolean; title: string; content: React.ReactNode } | null>(null);
+
+    const legalContent = {
+        terms: {
+            title: "KULLANIM ŞARTLARI",
+            content: (
+                <div className="space-y-4">
+                    <p>Senkron Bulut Okul Yönetim Sistemi ("Sistem"), eğitim kurumlarının yönetim süreçlerini dijitalleştirmek amacıyla sunulan bir hizmettir.</p>
+                    <section>
+                        <h4 className="font-bold">1. Lisans ve Kullanım</h4>
+                        <p>Kullanıcılar, sistemi sadece kendi eğitim kurumlarının iç süreçleri için kullanma hakkına sahiptir. Sistemin kopyalanması veya üçüncü taraflara kiralanması yasaktır.</p>
+                    </section>
+                    <section>
+                        <h4 className="font-bold">2. Sorumluluklar</h4>
+                        <p>Kullanıcı, sisteme girilen verilerin doğruluğundan sorumludur. Senkron, veri girişi kaynaklı hatalardan dolayı sorumlu tutulamaz.</p>
+                    </section>
+                    <section>
+                        <h4 className="font-bold">3. Hizmet Kesintisi</h4>
+                        <p>Planlı bakım çalışmaları dışında, sistem %99.9 erişilebilirlik hedefiyle sunulmaktadır.</p>
+                    </section>
+                </div>
+            )
+        },
+        privacy: {
+            title: "GİZLİLİK POLİTİKASI",
+            content: (
+                <div className="space-y-4">
+                    <p>Veri gizliliğiniz bizim için en üst önceliktir. Senkron, verilerinizi asla reklam amaçlı üçüncü taraflarla paylaşmaz.</p>
+                    <section>
+                        <h4 className="font-bold">1. Toplanan Veriler</h4>
+                        <p>Öğrenci numaraları, öğretmen branş bilgileri ve kurum içi ders programları sistemin işleyişi için güvenli bulut sunucularımızda saklanır.</p>
+                    </section>
+                    <section>
+                        <h4 className="font-bold">2. Veri Güvenliği</h4>
+                        <p>Tüm veriler SSL sertifikası ile şifrelenir ve düzenli olarak yedeklenir.</p>
+                    </section>
+                    <section>
+                        <h4 className="font-bold">3. Çerezler</h4>
+                        <p>Oturum yönetimi ve kullanıcı deneyimini iyileştirmek için sadece teknik çerezler kullanılmaktadır.</p>
+                    </section>
+                </div>
+            )
+        },
+        kvkk: {
+            title: "KVKK AYDINLATMA METNİ",
+            content: (
+                <div className="space-y-4">
+                    <p>6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca Senkron, veri işleyen sıfatıyla hareket etmektedir.</p>
+                    <section>
+                        <h4 className="font-bold">1. İşleme Amacı</h4>
+                        <p>Kişisel veriler, okul yönetim süreçlerinin yürütülmesi, ders programlarının hazırlanması ve veli-öğrenci bilgilendirmesi amacıyla işlenir.</p>
+                    </section>
+                    <section>
+                        <h4 className="font-bold">2. Haklarınız</h4>
+                        <p>Veri sahipleri, KVKK'nın 11. maddesi uyarınca verilerinin işlenip işlenmediğini öğrenme ve düzeltilmesini isteme hakkına sahiptir.</p>
+                    </section>
+                    <section>
+                        <h4 className="font-bold">3. Veri Sorumlusu</h4>
+                        <p>Veri sorumlusu, hizmeti kullanan eğitim kurumudur. Senkron, veri işleyen alt yüklenici olarak hizmet vermektedir.</p>
+                    </section>
+                </div>
+            )
+        }
+    };
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 20);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const stats = [
+        { label: "Okul", value: "262+" },
+        { label: "Öğrenci", value: "48k+" },
+        { label: "Öğretmen", value: "12k+" },
+        { label: "Memnuniyet", value: "%99" }
+    ];
+
+    const features = [
+        {
+            title: "AI Kamera: Optik Okuma",
+            description: "Sadece telefonunuzu tutun ve okuyun. Pahalı cihazlara gerek kalmadan sınav sonuçlarını saniyeler içinde dijitalleştirin.",
+            icon: <Zap className="w-6 h-6" />,
+            items: ["Cihazsız optik okuma", "Anlık analiz raporları", "Eksiksiz veri güvenliği"]
+        },
+        {
+            title: "Saniyelik Mobil Yoklama",
+            description: "Ders başında kağıt kalem karmaşasına son. Mobil uygulama üzerinden tek tıkla yoklama alın, velilere anında SMS gönderin.",
+            icon: <CheckCircle2 className="w-6 h-6" />,
+            items: ["Hızlı yoklama alma", "Veli bilgilendirme SMS", "Devamsızlık istatistikleri"]
+        },
+        {
+            title: "Yapay Zeka Ders Motoru",
+            description: "Binlerce olasılığı saniyeler içinde hesaplayan gelişmiş AI motoruyla, okulunuzun en ideal ders programını oluşturun.",
+            icon: <Brain className="w-6 h-6" />,
+            items: ["Otomatik çakışma kontrolü", "Optimize ders dağıtımı", "Boş ders yönetimi"]
+        },
+        {
+            title: "e-Okul & MEB Uyumu",
+            description: "Raporlarınızı e-Okul formatında otomatik alın. MEB standartlarıyla %100 uyumlu, yasal süreçlere tam entegre.",
+            icon: <Globe className="w-6 h-6" />,
+            items: ["Otomatik karne/rapor", "%100 MEB uyumu", "Tek tıkla dosya aktarımı"]
+        },
+        {
+            title: "Branş DNA Analizi",
+            description: "Öğretmenlerinizin yetkinliklerini, mesai yüklerini ve verimlilik grafiklerini tek bakışta görün.",
+            icon: <Database className="w-6 h-6" />,
+            items: ["Yük dengeleme", "Performans grafikleri", "Yetkinlik eşleştirme"]
+        },
+        {
+            title: "Anahtar Teslim Kurulum",
+            description: "Vaktiniz mi yok? Verilerinizi bize iletin, sisteminizi uzman ekibimiz tüm detaylarıyla hazır hale getirsin.",
+            icon: <Plus className="w-6 h-6" />,
+            items: ["Ücretsiz veri girişi", "Hızlı geçiş desteği", "Eksiksiz yapılandırma"]
+        }
+    ];
+
+    const faqs = [
+        {
+            q: "Ders programını ne kadar sürede hazırlar?",
+            a: "Senkron'un yapay zeka motoru, binlerce olasılığı saniyeler içinde tarar. Okulunuzun büyüklüğüne göre 2 ile 4 dakika arasında en optimize programı sunar."
+        },
+        {
+            q: "e-Okul ile veri aktarımı nasıl çalışıyor?",
+            a: "Senkron, e-Okul'un beklediği formatlarda raporlar üretir. Bu raporları tek tıkla indirip e-Okul sistemine yükleyebilir veya doğrudan entegrasyon API'larını kullanabilirsiniz."
+        },
+        {
+            q: "Fiyatlandırma modeliniz nedir?",
+            a: "Senkron, öğrenci başı yıllık lisanslama modeliyle çalışır. Yıllık öğrenci başı ücretimiz $1.80'dır. Bu ücrete tüm güncellemeler ve teknik destek dahildir."
+        },
+        {
+            q: "Veri girişini siz yapıyor musunuz?",
+            a: "Dilerseniz Excel formatındaki verilerinizi bize iletebilirsiniz. Uzman ekibimiz tüm öğrenci, öğretmen ve ders tanımlamalarınızı yaparak sistemi anahtar teslim şekilde size sunabilir."
+        }
+    ];
+
+    // Calculator Logic
+    const estimatedPrice = studentCount * 1.80;
+
+    return (
+        <div className="min-h-screen bg-white text-slate-900 font-mono selection:bg-cyan-100 selection:text-cyan-900">
+            {/* Navigation */}
+            <nav className={cn(
+                "fixed top-0 w-full z-50 transition-all duration-300 border-b",
+                scrolled ? "bg-white/80 backdrop-blur-md py-3 shadow-sm border-slate-100" : "bg-transparent py-5 border-transparent"
+            )}>
+                <div className="container mx-auto px-6 flex justify-between items-center">
+                    <div className="flex items-center gap-2 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform overflow-hidden">
+                            <img src="/senkron_logo.png" alt="Senkron Logo" className="w-full h-full object-contain" />
+                        </div>
+                        <span className="text-2xl font-black tracking-tighter text-slate-900 uppercase">Senkron</span>
+                    </div>
+
+                    <div className="hidden md:flex items-center gap-8">
+                        <a href="#ozellikler" className="text-sm font-semibold text-slate-600 hover:text-cyan-600 transition-colors">Özellikler</a>
+                        <a href="#nasil-calisir" className="text-sm font-semibold text-slate-600 hover:text-cyan-600 transition-colors">Nasıl Çalışır</a>
+                        <a href="#hesaplayici" className="text-sm font-semibold text-slate-600 hover:text-cyan-600 transition-colors">Hesaplayıcı</a>
+                        <a href="#katalog" className="text-sm font-semibold text-slate-600 hover:text-cyan-600 transition-colors">Katalog</a>
+                        <button
+                            onClick={onLoginClick}
+                            className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-sm font-bold rounded-full shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
+                        >
+                            14 Gün Ücretsiz Dene
+                        </button>
+                    </div>
+
+                    <button className="md:hidden text-slate-900" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                        {isMenuOpen ? <X /> : <Menu />}
+                    </button>
+                </div>
+            </nav>
+
+            {/* Mobile Menu */}
+            <AnimatePresence>
+                {isMenuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="fixed inset-0 z-40 bg-white pt-24 px-6 md:hidden"
+                    >
+                        <div className="flex flex-col gap-6 text-center">
+                            <a href="#ozellikler" onClick={() => setIsMenuOpen(false)} className="text-xl font-bold text-slate-800">Özellikler</a>
+                            <a href="#nasil-calisir" onClick={() => setIsMenuOpen(false)} className="text-xl font-bold text-slate-800">Nasıl Çalışır</a>
+                            <a href="#hesaplayici" onClick={() => setIsMenuOpen(false)} className="text-xl font-bold text-slate-800">Hesaplayıcı</a>
+                            <button
+                                onClick={() => { setIsMenuOpen(false); onLoginClick(); }}
+                                className="w-full py-4 bg-cyan-500 text-white font-bold rounded-xl"
+                            >
+                                14 Gün Ücretsiz Dene
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Hero Section */}
+            <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-cyan-50/50 rounded-[100%] blur-3xl -z-10" />
+
+                <div className="container mx-auto px-6 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 border border-cyan-100 text-cyan-700 text-xs font-bold uppercase tracking-wider mb-8">
+                            <ShieldCheck className="w-4 h-4" /> MEB Müfredatı ile %100 Uyumlu
+                        </div>
+                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-slate-900 mb-8">
+                            OKUL YÖNETİMİNDE<br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-blue-600">YENİ NESİL ÇÖZÜM</span>
+                        </h1>
+                        <p className="text-lg md:text-xl text-slate-600 max-w-3xl mx-auto mb-12 font-medium leading-relaxed">
+                            Öğretmen, öğrenci ve sınıf yönetiminden otomatik ders programı oluşturmaya, <span className="text-slate-900 font-bold">sınav kağıdını okuma</span>, <span className="text-slate-900 font-bold">yoklama takibinden</span> AI destekli analize kadar tüm eğitim süreçlerinizi tek platformda yönetin.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                            <button
+                                onClick={onLoginClick}
+                                className="w-full sm:w-auto px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-lg shadow-2xl shadow-slate-900/20 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                            >
+                                ÜCRETSİZ KAYDOL <ArrowRight className="w-5 h-5" />
+                            </button>
+                            <a
+                                href="#nasil-calisir"
+                                className="w-full sm:w-auto px-10 py-5 bg-white border-2 border-slate-200 text-slate-900 rounded-2xl font-black text-lg hover:border-cyan-500 hover:text-cyan-600 transition-all flex items-center justify-center gap-3"
+                            >
+                                NASIL ÇALIŞIR? <PlayCircle className="w-5 h-5" />
+                            </a>
+                        </div>
+
+                        {/* Interactive Image Slider */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3, duration: 0.8 }}
+                            className="relative max-w-5xl mx-auto mt-14 rounded-2xl md:rounded-[2.5rem] p-2 bg-gradient-to-b from-white to-slate-200/50 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] border border-white/40 ring-1 ring-slate-900/5 overflow-hidden"
+                        >
+                            <div className="aspect-[16/9] bg-[#f8fafc] rounded-2xl overflow-hidden relative group">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={currentSlide}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        transition={{ duration: 0.5 }}
+                                        className="absolute inset-0"
+                                    >
+                                        <img
+                                            src={slides[currentSlide].url}
+                                            alt={slides[currentSlide].title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </motion.div>
+                                </AnimatePresence>
+
+                                {/* Slider Controls */}
+                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-10 px-4 py-2 bg-black/10 backdrop-blur-md rounded-full border border-white/20">
+                                    {slides.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setCurrentSlide(idx)}
+                                            className={cn(
+                                                "w-2.5 h-2.5 rounded-full transition-all duration-300",
+                                                currentSlide === idx ? "bg-cyan-500 w-8" : "bg-white/50 hover:bg-white"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+
+                                {/* Title Overlay */}
+                                <div className="absolute top-6 left-6 px-4 py-2 bg-white/90 backdrop-blur rounded-xl border border-slate-200/50 shadow-sm transition-opacity group-hover:opacity-100 opacity-0 md:opacity-100">
+                                    <span className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">{slides[currentSlide].title}</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* Stats Section */}
+            <section className="bg-slate-900 py-20 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/5 blur-[120px] rounded-full" />
+                <div className="container mx-auto px-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
+                        {stats.map((stat, idx) => (
+                            <div key={idx} className="flex flex-col gap-2">
+                                <span className="text-4xl md:text-5xl font-black text-white tracking-tighter">{stat.value}</span>
+                                <span className="text-cyan-400/60 uppercase text-xs font-black tracking-widest">{stat.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Features Section */}
+            <section id="ozellikler" className="py-24 md:py-32 bg-slate-50/50">
+                <div className="container mx-auto px-6">
+                    <div className="max-w-3xl mx-auto text-center mb-20">
+                        <h2 className="text-sm font-black text-cyan-600 uppercase tracking-widest mb-4">Üstün Teknoloji</h2>
+                        <h3 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 mb-6">Senkron ile Yönetim Artık Bir Sanat</h3>
+                        <p className="text-lg text-slate-600 font-medium leading-relaxed mb-8">Pazar geceleri Excel tablolarıyla boğuşmaya son veriyoruz. Yapay zeka ile her şey senkronize, her şey şeffaf.</p>
+                        <a
+                            href="https://www.genspark.ai/api/files/s/wb6K2zMh"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:border-cyan-500 hover:text-cyan-600 transition-all shadow-sm shadow-slate-100"
+                        >
+                            <Database className="w-4 h-4" /> Detaylı Kataloğu İndirin (PDF)
+                        </a>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {features.map((f, idx) => (
+                            <motion.div
+                                whileHover={{ y: -5 }}
+                                key={idx}
+                                className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-cyan-500/5 transition-all group"
+                            >
+                                <div className="w-14 h-14 bg-cyan-50 rounded-2xl flex items-center justify-center text-cyan-600 mb-6 group-hover:scale-110 group-hover:bg-cyan-600 group-hover:text-white transition-all duration-300">
+                                    {f.icon}
+                                </div>
+                                <h4 className="text-xl font-bold text-slate-900 mb-4 tracking-tight">{f.title}</h4>
+                                <p className="text-slate-600 text-sm leading-relaxed mb-6 font-medium">{f.description}</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {f.items.map((item, i) => (
+                                        <span key={i} className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 bg-slate-50 text-slate-500 rounded-md border border-slate-100">
+                                            {item}
+                                        </span>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* Pricing Calculator Section */}
+            <section id="hesaplayici" className="py-24 md:py-32 overflow-hidden relative">
+                <div className="container mx-auto px-6">
+                    <div className="max-w-3xl mx-auto text-center mb-16">
+                        <h2 className="text-sm font-black text-cyan-600 uppercase tracking-widest mb-4">Şeffaf Fiyatlandırma</h2>
+                        <h3 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 mb-8">Bütçenizi Şeffafça Planlayın</h3>
+                        <p className="text-lg text-slate-600 font-medium leading-relaxed">Senkron, okulunuzun büyüklüğüne göre ölçeklenir. Gizli ücretler yok, karmaşık paketler yok. Sadece öğrenci sayısı kadar ödeyin.</p>
+                    </div>
+
+                    <div className="max-w-2xl mx-auto bg-white rounded-[3rem] p-8 md:p-12 border border-slate-100 shadow-2xl relative">
+                        <div className="flex flex-col gap-10">
+                            <div className="space-y-8">
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                    <label className="text-sm font-black text-slate-900 uppercase tracking-wider">Öğrenci Sayısı</label>
+                                    <div className="relative group">
+                                        <input
+                                            type="number"
+                                            value={studentCount}
+                                            onChange={(e) => setStudentCount(Math.max(0, Number(e.target.value)))}
+                                            className="text-center sm:text-right text-3xl font-black text-cyan-600 bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-3 focus:border-cyan-500 focus:bg-white outline-none w-full sm:w-48 transition-all"
+                                        />
+                                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-cyan-600 rounded-full flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform">
+                                            <Check className="w-3 h-3" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <input
+                                    type="range" min="100" max="5000" step="50"
+                                    value={studentCount}
+                                    onChange={(e) => setStudentCount(Number(e.target.value))}
+                                    className="w-full h-3 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-cyan-600"
+                                />
+                            </div>
+
+                            <div className="pt-8 border-t border-slate-100 mt-4">
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-6 py-8 bg-gradient-to-br from-cyan-50 to-blue-50 px-8 rounded-[2rem] border border-cyan-100/50">
+                                    <div className="flex flex-col text-center sm:text-left">
+                                        <span className="text-cyan-900 font-black text-xs uppercase tracking-[0.2em] mb-1">Yıllık Lisans Bedeli</span>
+                                        <span className="text-slate-500 text-[11px] font-bold">Öğrenci başı $1.80 (Tüm özellikler dahil)</span>
+                                    </div>
+                                    <div className="text-cyan-600 font-black text-5xl tracking-tighter">
+                                        ${estimatedPrice.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="text-center px-4">
+                                <p className="text-[11px] text-slate-400 font-medium leading-relaxed italic">
+                                    * Bu tutar, okulunuzun yıllık toplam kullanım bedelidir. Teknik destek, bulut barındırma ve tüm yapay zeka güncellemeleri fiyata dahildir.
+                                    <span className="text-cyan-600 font-bold block mt-1">İsteğe bağlı olarak veri girişleriniz uzman ekibimiz tarafından ücretsiz/destek kapsamında gerçekleştirilebilir.</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Testimonials */}
+            <section className="py-24 md:py-32 bg-slate-900 relative overflow-hidden">
+                <div className="container mx-auto px-6">
+                    <div className="max-w-3xl mx-auto text-center mb-20">
+                        <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-6 uppercase">İdareciler Ne Diyor?</h2>
+                        <p className="text-slate-400 font-medium">Türkiye'nin dört bir yanındaki okullardan geri bildirimler.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {[
+                            { name: "Ahmet Y.", role: "Kampüs Müdürü", text: "Pazar geceleri sabahlara kadar süren ders programı hazırlama dönemi bitti. 10 dakikada her şey hazır!" },
+                            { name: "Zeynep K.", role: "Okul Müdürü", text: "Öğretmen yükü dengelemesi muhteşem çalışıyor. Artık kimse 'ben çok ders giriyorum' demiyor." },
+                            { name: "Mustafa S.", role: "Müdür Yardımcısı", text: "e-Okul entegrasyonu sayesinde veri girişi için saatler harcamıyoruz. Tek tıkla tüm raporlar hazır." }
+                        ].map((t, idx) => (
+                            <div key={idx} className="bg-white/5 border border-white/10 p-8 rounded-3xl relative">
+                                <div className="text-6xl text-cyan-500 opacity-20 absolute top-4 left-4 font-serif">"</div>
+                                <p className="text-lg text-slate-300 font-medium italic mb-8 relative z-10">
+                                    {t.text}
+                                </p>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-full" />
+                                    <div className="flex flex-col">
+                                        <span className="text-white font-bold">{t.name}</span>
+                                        <span className="text-slate-500 text-xs uppercase tracking-widest font-bold">{t.role}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* FAQ Section */}
+            <section className="py-24 md:py-32">
+                <div className="container mx-auto px-6 max-w-4xl">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tighter uppercase">Sıkça Sorulan Sorular</h2>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                        {faqs.map((faq, idx) => (
+                            <div key={idx} className="border border-slate-100 rounded-2xl overflow-hidden hover:border-cyan-200 transition-colors">
+                                <button
+                                    onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
+                                    className="w-full px-8 py-6 flex justify-between items-center text-left bg-white"
+                                >
+                                    <span className="text-lg font-bold text-slate-900 tracking-tight">{faq.q}</span>
+                                    <div className={cn("p-1 rounded-lg transition-all", activeFaq === idx ? "bg-cyan-500 text-white rotate-45" : "bg-slate-50 text-slate-400 -rotate-0")}>
+                                        <Plus className="w-5 h-5" />
+                                    </div>
+                                </button>
+                                <AnimatePresence>
+                                    {activeFaq === idx && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="px-8 pb-8 text-slate-600 font-medium leading-relaxed bg-white"
+                                        >
+                                            {faq.a}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA Section */}
+            <section className="pb-24 pt-12">
+                <div className="container mx-auto px-6">
+                    <div className="bg-gradient-to-r from-cyan-600 to-blue-700 rounded-[3rem] p-12 md:p-24 text-center relative overflow-hidden shadow-2xl shadow-cyan-500/30">
+                        <div className="absolute inset-0 bg-grid-white/[0.05] -z-0" />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white opacity-10 blur-[100px] rounded-full -z-0" />
+
+                        <div className="relative z-10 max-w-2xl mx-auto">
+                            <h2 className="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter leading-tight uppercase">OKULUNUZUN RİTMİNİ DEĞİŞTİRMEYE HAZIR MISINIZ?</h2>
+                            <p className="text-cyan-100 text-xl font-medium mb-12">Karmaşayı durdurun, yönetimi sanat haline getirin. Senkron ile yarının okulunu bugün yönetin.</p>
+                            <button
+                                onClick={onLoginClick}
+                                className="px-12 py-6 bg-white text-slate-900 rounded-2xl font-black text-xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-cyan-900/40"
+                            >
+                                DEMO TALEBİ OLUŞTURUN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Footer */}
+            <footer className="py-20 bg-slate-50 border-t border-slate-100">
+                <div className="container mx-auto px-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+                        <div className="col-span-1 md:col-span-1">
+                            <div className="flex items-center gap-2 mb-6">
+                                <div className="w-8 h-8 overflow-hidden">
+                                    <img src="/senkron_logo.png" alt="Senkron Logo" className="w-full h-full object-contain" />
+                                </div>
+                                <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">Senkron</span>
+                            </div>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-8">
+                                Geleceğin okul yönetim sistemi. Yapay zeka ile her şey kontrolünüz altında.
+                            </p>
+                            {/* Social Links Mockup */}
+                            <div className="flex gap-4">
+                                {[1, 2, 3, 4].map(i => <div key={i} className="w-8 h-8 bg-white border border-slate-200 rounded-lg" />)}
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">HIZLI MENÜ</span>
+                            <a href="#ozellikler" className="text-slate-600 font-bold hover:text-cyan-600 transition-colors">Özellikler</a>
+                            <a href="#nasil-calisir" className="text-slate-600 font-bold hover:text-cyan-600 transition-colors">Nasıl Çalışır</a>
+                            <a href="#hesaplayici" className="text-slate-600 font-bold hover:text-cyan-600 transition-colors">Hesaplayıcı</a>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">İLETİŞİM</span>
+                            <a href="mailto:agentzekai@gmail.com" className="text-slate-600 font-bold hover:text-cyan-600 transition-colors">agentzekai@gmail.com</a>
+                            <a href="tel:+905458858577" className="text-slate-600 font-bold hover:text-cyan-600 transition-colors">+90 (545) 885 85 77</a>
+                            <span className="text-slate-500 text-sm font-medium">Bilişim Vadisi, Gebze/Kocaeli</span>
+                        </div>
+
+                        <div className="flex flex-col gap-4">
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-2">YASAL</span>
+                            <button onClick={() => setLegalModal({ isOpen: true, ...legalContent.terms })} className="text-left text-slate-600 font-bold hover:text-cyan-600 transition-colors">Kullanım Şartları</button>
+                            <button onClick={() => setLegalModal({ isOpen: true, ...legalContent.privacy })} className="text-left text-slate-600 font-bold hover:text-cyan-600 transition-colors">Gizlilik Politikası</button>
+                            <button onClick={() => setLegalModal({ isOpen: true, ...legalContent.kvkk })} className="text-left text-slate-600 font-bold hover:text-cyan-600 transition-colors">KVKK Aydınlatma</button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-10 border-t border-slate-200/50">
+                        <span className="text-slate-400 text-sm font-medium">© 2026 Senkron AI. Tüm hakları saklıdır.</span>
+                        <div className="flex gap-8">
+                            <span className="text-slate-300 text-xs font-bold uppercase tracking-widest">MADE IN TURKIYE</span>
+                            <span className="text-slate-300 text-xs font-bold uppercase tracking-widest">SECURE PAYMENT</span>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+
+            {/* Back to top button snippet */}
+            {scrolled && (
+                <motion.button
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="fixed bottom-8 right-8 w-14 h-14 bg-white border border-slate-100 shadow-2xl rounded-2xl flex items-center justify-center text-slate-900 z-50 hover:bg-slate-50 transition-colors"
+                >
+                    <ChevronRight className="w-6 h-6 -rotate-90" />
+                </motion.button>
+            )}
+
+            {/* WhatsApp Floating Button */}
+            <a
+                href="https://wa.me/905458858577"
+                target="_blank"
+                rel="noreferrer"
+                className="fixed bottom-8 left-8 w-14 h-14 bg-green-500 shadow-2xl shadow-green-500/30 rounded-full flex items-center justify-center text-white z-50 cursor-pointer hover:scale-110 active:scale-95 transition-all"
+            >
+                <svg viewBox="0 0 24 24" className="w-8 h-8 fill-current" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.937 3.672 1.433 5.66 1.434h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                </svg>
+            </a>
+
+            {/* Legal Modal Render */}
+            <AnimatePresence>
+                {legalModal?.isOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setLegalModal(null)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+                        >
+                            <div className="p-8 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tighter">{legalModal.title}</h3>
+                                <button onClick={() => setLegalModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                    <X className="w-6 h-6 text-slate-500" />
+                                </button>
+                            </div>
+                            <div className="p-8 overflow-y-auto text-slate-600 font-medium leading-relaxed">
+                                {legalModal.content}
+                            </div>
+                            <div className="p-6 bg-slate-50 border-t border-slate-100 text-center">
+                                <button
+                                    onClick={() => setLegalModal(null)}
+                                    className="px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:scale-105 active:scale-95 transition-all"
+                                >
+                                    ANLADIM, KAPAT
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+export default LandingPage;

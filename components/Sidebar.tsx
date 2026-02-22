@@ -62,6 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, userRo
       { id: ModuleType.ABSENCE_REPORT, label: 'YOKLAMA RAPORU', icon: 'fa-clipboard-list', roles: [UserRole.ADMIN] },
       { id: ModuleType.SCHEDULING, label: 'MOTOR', icon: 'fa-bolt', roles: [UserRole.ADMIN] },
       { id: ModuleType.CREDENTIALS, label: 'ŞİFRE YÖNETİMİ', icon: 'fa-key', roles: [UserRole.ADMIN] },
+      { id: ModuleType.SUBSCRIPTION_REQUIRED, label: 'ABONELİK', icon: 'fa-credit-card', roles: [UserRole.ADMIN] },
       { id: ModuleType.SETTINGS, label: 'AYARLAR', icon: 'fa-gear', roles: [UserRole.ADMIN] },
     ];
   }
@@ -96,9 +97,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeModule, setActiveModule, userRo
         <div className="pt-4 mt-4 border-t border-[#354a5f]/30">
           <button
             onClick={async () => {
-              await supabase.auth.signOut();
               localStorage.removeItem('senkron_session');
-              window.location.reload();
+              await supabase.auth.signOut();
+              // Removed reload to preserve setShowAuth(true) state in App.tsx
             }}
             className="w-full flex items-center justify-center md:justify-start gap-4 px-2.5 md:px-4 py-5.5 md:py-3 text-red-400/50 hover:text-red-400 hover:bg-red-400/5 transition-all group rounded-sm"
             title="Güvenli Çıkış"

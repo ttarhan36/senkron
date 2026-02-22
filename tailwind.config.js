@@ -6,7 +6,12 @@ export default {
     "./**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        mono: ['"JetBrains Mono"', 'monospace'],
+        sans: ['"JetBrains Mono"', 'monospace'], // User requested change for landing page, applying globally for consistency if preferred
+      },
+    },
   },
   plugins: [],
 }

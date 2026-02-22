@@ -6,11 +6,12 @@ import { UserRole, UserSession } from '../../types';
 interface AuthTerminalProps {
   onAuthSuccess: (session: UserSession) => void;
   triggerSuccess: (msg?: string) => void;
+  onBackToLanding: () => void;
 }
 
 type LoginRole = 'ADMIN' | 'TEACHER' | 'STUDENT';
 
-const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSuccess }) => {
+const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSuccess, onBackToLanding }) => {
   const [activeTab, setActiveTab] = useState<LoginRole>('ADMIN');
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'RESET'>('LOGIN'); // Sadece Admin için
   const [loading, setLoading] = useState(false);
@@ -341,6 +342,17 @@ const AuthTerminal: React.FC<AuthTerminalProps> = ({ onAuthSuccess, triggerSucce
           <button onClick={() => { setActiveTab('ADMIN'); resetForms(); }} className={`flex-1 h-10 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'ADMIN' ? 'text-white border-[#3b82f6]' : 'text-slate-600 border-transparent hover:text-slate-400'}`}>İDARECİ</button>
           <button onClick={() => { setActiveTab('TEACHER'); resetForms(); }} className={`flex-1 h-10 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'TEACHER' ? 'text-white border-[#3b82f6]' : 'text-slate-600 border-transparent hover:text-slate-400'}`}>ÖĞRETMEN</button>
           <button onClick={() => { setActiveTab('STUDENT'); resetForms(); }} className={`flex-1 h-10 text-[9px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'STUDENT' ? 'text-white border-[#3b82f6]' : 'text-slate-600 border-transparent hover:text-slate-400'}`}>ÖĞRENCİ</button>
+        </div>
+
+        {/* Back to Home Button */}
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={onBackToLanding}
+            className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-full text-slate-500 hover:text-white hover:bg-white/10 transition-all group"
+            title="Ana Sayfaya Dön"
+          >
+            <i className="fa-solid fa-house text-sm group-hover:scale-110 transition-transform"></i>
+          </button>
         </div>
 
         {/* FORMS */}
