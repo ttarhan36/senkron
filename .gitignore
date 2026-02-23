@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Verdent / Agent internals
+.verdent/
+.agent/
+.agents/
+.worktrees/
