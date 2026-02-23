@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS exams (
     applied_date DATE,
     wrong_penalty_ratio DECIMAL(5,4) DEFAULT 0.3333,
     status TEXT DEFAULT 'PLANNED' CHECK (status IN ('PLANNED', 'DONE')),
+    class_ids TEXT[],
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -99,3 +100,10 @@ CREATE INDEX IF NOT EXISTS idx_exam_questions_session_id ON exam_questions(sessi
 CREATE INDEX IF NOT EXISTS idx_student_responses_student_id ON student_responses(student_id);
 CREATE INDEX IF NOT EXISTS idx_student_responses_question_id ON student_responses(question_id);
 CREATE INDEX IF NOT EXISTS idx_objectives_school_id ON objectives(school_id);
+
+-- Upsert için unique kısıt (session başına soru numarası benzersiz)
+ALTER TABLE exam_questions ADD CONSTRAINT IF NOT EXISTS uq_session_question UNIQUE (session_id, question_number);
+-- Öğrenci başına her soru için tek yanıt
+ALTER TABLE student_responses ADD CONSTRAINT IF NOT EXISTS uq_student_question UNIQUE (student_id, question_id);
+-- Migration: class_ids sütunu ekle (tablo zaten varsa)
+ALTER TABLE exams ADD COLUMN IF NOT EXISTS class_ids TEXT[];

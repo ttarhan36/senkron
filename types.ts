@@ -348,6 +348,7 @@ export interface ExamPackage {
   appliedDate?: string;
   wrongPenaltyRatio: number;
   status: 'PLANNED' | 'DONE';
+  classIds?: string[];
   sessions?: ExamSession[];
   createdAt?: number;
 }
